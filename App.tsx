@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import {StatusBar, View, StyleSheet, Platform, Pressable} from 'react-native';
+import {StatusBar, Platform} from 'react-native';
 import {NavigationContainer, DarkTheme} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {
@@ -54,15 +54,16 @@ function TabNavigator() {
           fontWeight: theme.typography.fontWeight.semiBold,
           fontSize: theme.typography.fontSize.xl,
         },
-        tabBarIcon: ({focused, color, size}) => {
+        tabBarIcon: ({color}) => {
           let iconName: string;
 
           // All icons use outline style - active tabs just have neon blue color
           if (route.name === 'Home') {
             iconName = 'home-outline';
           } else if (route.name === 'ForYou') {
+            // iconName = 'flame-outline';
             // Play button enclosed within a rounded square outline
-            iconName = 'play-square-outline';
+            iconName = 'play-circle-outline';
           } else if (route.name === 'Browse') {
             // Grid of nine small squares
             iconName = 'grid-outline';
@@ -79,15 +80,13 @@ function TabNavigator() {
           return <Icon name={iconName} size={24} color={color} />;
         },
         tabBarActiveTintColor: theme.colors.blue.primary,
-        tabBarInactiveTintColor: '#CCCCCC', // Light gray/white for inactive tabs
+        tabBarInactiveBackgroundColor: theme.colors.background.primary,
+        tabBarInactiveTintColor: theme.colors.text.secondary, // Light gray/white for inactive tabs
         tabBarStyle: {
-          backgroundColor: theme.colors.background.elevated,
           borderTopWidth: 0,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          paddingTop: theme.spacing.md,
+          paddingTop: 0,
           paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
-          height: 70 + insets.bottom,
+          height: 60 + insets.bottom,
           position: 'absolute',
           ...Platform.select({
             ios: {
@@ -98,38 +97,18 @@ function TabNavigator() {
             },
             android: {
               elevation: 12,
-              borderTopWidth: 2,
-              borderTopColor: theme.colors.blue.primary,
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.border.primary,
             },
           }),
         },
         tabBarLabelStyle: {
           fontSize: theme.typography.fontSize.xs,
           fontWeight: theme.typography.fontWeight.medium,
-          marginTop: 2,
+          marginTop: 0,
         },
         tabBarItemStyle: {
-          paddingVertical: theme.spacing.xs,
-        },
-        tabBarButton: (props) => {
-          const {accessibilityState, style, onPress, onPressIn, onPressOut, ...otherProps} = props;
-          const isSelected = accessibilityState?.selected;
-          
-          return (
-            <Pressable
-              onPress={onPress}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}
-              style={({pressed}) => [
-                style,
-                isSelected && styles.activeTabBackground,
-                pressed && {opacity: 0.7},
-              ]}
-              {...otherProps}
-            >
-              {props.children}
-            </Pressable>
-          );
+          backgroundColor: theme.colors.background.primary,
         },
       })}>
       <Tab.Screen
@@ -171,18 +150,6 @@ function TabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  activeTabBackground: {
-    backgroundColor: 'rgba(26, 26, 26, 0.8)', // Darker background for active tab
-    borderRadius: 14,
-    marginHorizontal: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    minHeight: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 function App() {
   return (
