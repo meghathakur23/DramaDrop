@@ -56,6 +56,11 @@ yarn-error.log
 # Bundle artifact
 *.jsbundle
 
+# Video files (too large for GitHub)
+*.mp4
+**/*.mp4
+src/video/*.mp4
+
 # Ruby / CocoaPods
 **/Pods/
 /vendor/bundle/
