@@ -1,5 +1,6 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
+import {theme} from '../theme';
 
 function ForYouScreen() {
   return (
@@ -15,16 +16,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.primary,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: theme.typography.fontSize['3xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.blue.primary,
+    marginBottom: theme.spacing.md,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
   },
 });
 
