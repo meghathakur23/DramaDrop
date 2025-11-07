@@ -3,12 +3,13 @@ import {ScrollView, StyleSheet} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {theme} from '../theme';
 import AppHeader from '../components/AppHeader';
-import SpotlightBanner from '../components/SpotlightBanner';
+import SpotlightCarousel from '../components/SpotlightCarousel';
 import HorizontalDramaList from '../components/HorizontalDramaList';
 import {
   trendingDramas,
   latestReleases,
   forYouDramas,
+  spotlightItems,
 } from '../data/dummyData';
 
 function HomeScreen() {
@@ -19,7 +20,7 @@ function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <AppHeader />
-        <SpotlightBanner />
+        <SpotlightCarousel data={spotlightItems} />
         
         <HorizontalDramaList
           title="Trending Dramas"

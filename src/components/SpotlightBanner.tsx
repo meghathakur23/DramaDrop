@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
   },
   spotlightText: {
-    fontSize: theme.typography.fontSize['4xl'],
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
     marginBottom: theme.spacing.lg,

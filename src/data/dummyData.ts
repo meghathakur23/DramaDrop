@@ -106,3 +106,37 @@ export const forYouDramas: DramaItem[] = [
   },
 ];
 
+export interface SpotlightItem {
+  id: string;
+  title: string;
+  image: ImageSourcePropType;
+}
+
+export const spotlightItems: SpotlightItem[] = [
+  {
+    id: 'spotlight1',
+    title: 'Tonight\'s Spotlight',
+    image: require('../images/data1.png'),
+  },
+  {
+    id: 'spotlight2',
+    title: 'Tonight\'s Spotlight',
+    image: require('../images/data2.png'),
+  },
+  {
+    id: 'spotlight3',
+    title: 'Tonight\'s Spotlight',
+    image: require('../images/data3.png'),
+  },
+  {
+    id: 'spotlight4',
+    title: 'Tonight\'s Spotlight',
+    image: require('../images/data4.png'),
+  },
+  {
+    id: 'spotlight5',
+    title: 'Tonight\'s Spotlight',
+    image: require('../images/data5.png'),
+  },
+];
+
