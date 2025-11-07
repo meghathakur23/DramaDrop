@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -11,35 +11,97 @@ import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useAtom} from 'jotai';
 import {VideoItem} from '../data/videoData';
 import {theme} from '../theme';
+import {
+  watchlistAtom,
+  addToWatchlist,
+  removeFromWatchlist,
+  isInWatchlistAtom,
+} from '../store/watchlistAtoms';
+import {
+  videoProgressAtom,
+  updateVideoProgress,
+} from '../store/videoProgressAtoms';
+import {DramaItem} from '../data/dummyData';
 
 const {height: WINDOW_HEIGHT, width: WINDOW_WIDTH} = Dimensions.get('window');
 
 interface VideoCardProps {
   video: VideoItem;
   isPlaying: boolean;
+  initialProgress?: number; // Time in seconds to resume from
   onLike?: (videoId: string) => void;
   onFollow?: (author: string) => void;
+  dramaItem?: DramaItem; // Drama item for watchlist
 }
 
 function VideoCard({
   video,
   isPlaying,
+  initialProgress = 0,
   onLike,
   onFollow,
+  dramaItem,
 }: VideoCardProps) {
   const [paused, setPaused] = useState(!isPlaying);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const insets = useSafeAreaInsets();
+  const [showSideButtons, setShowSideButtons] = useState(false);
+  const [hasSeeked, setHasSeeked] = useState(false);
+  // Use safe area insets with fallback
+  const safeAreaInsets = useSafeAreaInsets();
+  const insets = safeAreaInsets || {top: 0, bottom: 0, left: 0, right: 0};
+  const videoRef = useRef<any>(null);
+  const [watchlist, setWatchlist] = useAtom(watchlistAtom);
+  const [videoProgress, setVideoProgress] = useAtom(videoProgressAtom);
+  const isInWatchlist = useAtom(isInWatchlistAtom)[0];
+
+  // Check if drama is in watchlist
+  const isSaved = dramaItem ? isInWatchlist(dramaItem.id) : false;
 
   // Sync paused state with isPlaying prop
   useEffect(() => {
     setPaused(!isPlaying);
   }, [isPlaying]);
+
+  // Auto-hide side buttons after 3 seconds when video starts playing
+  useEffect(() => {
+    if (isPlaying && !paused) {
+      // Show buttons immediately when video starts
+      setShowSideButtons(true);
+      
+      // Hide after 3 seconds
+      const timer = setTimeout(() => {
+        setShowSideButtons(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isPlaying, paused]);
+
+  // Resume from last position when video loads
+  useEffect(() => {
+    if (
+      initialProgress > 0 &&
+      videoRef.current &&
+      !hasSeeked &&
+      !isLoading &&
+      !hasError
+    ) {
+      // Small delay to ensure video is ready for seeking
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.seek(initialProgress);
+          setHasSeeked(true);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [initialProgress, isLoading, hasSeeked, hasError]);
 
   // Auto-hide controls after 3 seconds
   useEffect(() => {
@@ -51,15 +113,54 @@ function VideoCard({
     }
   }, [showControls, isPlaying]);
 
+  // Save progress when video is paused or component unmounts
+  useEffect(() => {
+    const currentRef = videoRef.current;
+    return () => {
+      // Save progress on unmount
+      if (currentRef && !paused) {
+        // Progress will be saved via onProgress callback
+      }
+    };
+  }, [paused]);
+
   const handleLike = () => {
     if (onLike) {
       onLike(video.id);
     }
   };
 
-  const handleFollow = () => {
+  const handleFollow = async () => {
+    if (dramaItem) {
+      const isCurrentlySaved = isInWatchlist(dramaItem.id);
+      if (isCurrentlySaved) {
+        // Remove from watchlist
+        const updated = await removeFromWatchlist(watchlist, dramaItem.id);
+        setWatchlist(updated);
+      } else {
+        // Add to watchlist
+        const updated = await addToWatchlist(watchlist, dramaItem);
+        setWatchlist(updated);
+      }
+    }
     if (onFollow) {
       onFollow(video.author);
+    }
+  };
+
+  const handleProgress = (data: {currentTime: number; playableDuration: number}) => {
+    if (data.playableDuration > 0) {
+      // Save progress periodically (every 5 seconds)
+      if (Math.floor(data.currentTime) % 5 === 0) {
+        updateVideoProgress(
+          videoProgress,
+          video.id,
+          data.currentTime,
+          data.playableDuration,
+        ).then(updated => {
+          setVideoProgress(updated);
+        });
+      }
     }
   };
 
@@ -78,6 +179,7 @@ function VideoCard({
       {/* Full-screen video player or thumbnail fallback */}
       {!hasError ? (
         <Video
+          ref={videoRef}
           source={video.videoSource as any}
           style={StyleSheet.absoluteFillObject}
           resizeMode="cover"
@@ -87,6 +189,7 @@ function VideoCard({
           playInBackground={false}
           playWhenInactive={false}
           ignoreSilentSwitch="obey"
+          progressUpdateInterval={1000}
           onLoadStart={() => {
             setIsLoading(true);
             setHasError(false);
@@ -95,10 +198,19 @@ function VideoCard({
             setIsLoading(false);
             console.log('Video loaded');
           }}
-          onError={error => {
+          onProgress={handleProgress}
+          onError={(error: any) => {
             console.error('Video error:', error);
             setHasError(true);
             setIsLoading(false);
+          }}
+          onBuffer={(data: any) => {
+            // Handle buffering
+            if (data.isBuffering) {
+              setIsLoading(true);
+            } else {
+              setIsLoading(false);
+            }
           }}
         />
       ) : (
@@ -126,41 +238,43 @@ function VideoCard({
           </View> */}
         </View>
 
-        {/* Right side - Interaction buttons */}
-        <View style={[styles.interactionButtons, {bottom: Math.max(insets.bottom + theme.spacing.xl + 120, theme.spacing['2xl'] + 120)}]}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={handleLike}
-            activeOpacity={0.7}>
-            <Icon
-              name={video.isLiked ? 'heart' : 'heart-outline'}
-              size={32}
-              color={video.isLiked ? theme.colors.status.error : theme.colors.text.primary}
-            />
-            <Text style={styles.buttonText}>{video.likes}</Text>
-          </TouchableOpacity>
+        {/* Right side - Interaction buttons (shown for 3 seconds when video starts) */}
+        {showSideButtons && (
+          <View style={[styles.interactionButtons, {bottom: Math.max(insets.bottom + theme.spacing.xl + 120, theme.spacing['2xl'] + 120)}]}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleLike}
+              activeOpacity={0.7}>
+              <Icon
+                name={video.isLiked ? 'heart' : 'heart-outline'}
+                size={32}
+                color={video.isLiked ? theme.colors.status.error : theme.colors.text.primary}
+              />
+              <Text style={styles.buttonText}>{video.likes}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-            <Icon
-              name="list-outline"
-              size={32}
-              color={theme.colors.text.primary}
-            />
-            <Text style={styles.buttonText}>Episodes</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+              <Icon
+                name="list-outline"
+                size={32}
+                color={theme.colors.text.primary}
+              />
+              <Text style={styles.buttonText}>Episodes</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={handleFollow}
-            activeOpacity={0.7}>
-            <Icon
-              name={video.isFollowing ? 'bookmark' : 'bookmark-outline'}
-              size={32}
-              color={video.isFollowing ? theme.colors.blue.primary : theme.colors.text.primary}
-            />
-            <Text style={styles.buttonText}>Follow</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleFollow}
+              activeOpacity={0.7}>
+              <Icon
+                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                size={32}
+                color={isSaved ? theme.colors.blue.primary : theme.colors.text.primary}
+              />
+              <Text style={styles.buttonText}>Follow</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Center - Play/Pause button (shown when paused or controls visible) */}
         {(paused || showControls) && (

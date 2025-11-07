@@ -11,6 +11,8 @@ interface HorizontalDramaListProps {
   onActionPress?: () => void;
   showPlayIcon?: boolean;
   showAddIcon?: boolean;
+  onDramaPress?: (item: DramaItem) => void;
+  onDramaSave?: (item: DramaItem) => void;
 }
 
 function HorizontalDramaList({
@@ -20,12 +22,16 @@ function HorizontalDramaList({
   onActionPress,
   showPlayIcon = false,
   showAddIcon = false,
+  onDramaPress,
+  onDramaSave,
 }: HorizontalDramaListProps) {
   const renderItem = ({item}: {item: DramaItem}) => (
     <DramaCard
       item={item}
       showPlayIcon={showPlayIcon}
       showAddIcon={showAddIcon}
+      onPress={() => onDramaPress?.(item)}
+      onSavePress={onDramaSave}
     />
   );
 

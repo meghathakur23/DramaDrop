@@ -1,17 +1,36 @@
 import React from 'react';
 import {View, Text, Image, StyleSheet, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import {useAtom} from 'jotai';
 import {theme} from '../theme';
 import {DramaItem} from '../data/dummyData';
+import {isInWatchlistAtom} from '../store/watchlistAtoms';
 
 interface DramaCardProps {
   item: DramaItem;
   showPlayIcon?: boolean;
   showAddIcon?: boolean;
   onPress?: () => void;
+  onSavePress?: (item: DramaItem) => void;
 }
 
-function DramaCard({item, showPlayIcon = false, showAddIcon = false, onPress}: DramaCardProps) {
+function DramaCard({
+  item,
+  showPlayIcon = false,
+  showAddIcon = false,
+  onPress,
+  onSavePress,
+}: DramaCardProps) {
+  const isInWatchlist = useAtom(isInWatchlistAtom)[0];
+  const isSaved = isInWatchlist(item.id);
+
+  const handleSavePress = (e: any) => {
+    e.stopPropagation();
+    if (onSavePress) {
+      onSavePress(item);
+    }
+  };
+
   return (
     <TouchableOpacity
       style={styles.container}
@@ -51,6 +70,23 @@ function DramaCard({item, showPlayIcon = false, showAddIcon = false, onPress}: D
             </View>
           </View>
         )}
+
+        {/* Bookmark Button (always visible, positioned on left if other icons present) */}
+        <TouchableOpacity
+          style={[
+            styles.bookmarkContainer,
+            (showPlayIcon || showAddIcon) && styles.bookmarkContainerLeft,
+          ]}
+          onPress={handleSavePress}
+          activeOpacity={0.7}>
+          <View style={styles.bookmarkBackground}>
+            <Icon
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color={isSaved ? theme.colors.blue.primary : theme.colors.text.primary}
+            />
+          </View>
+        </TouchableOpacity>
       </View>
       
       <Text style={styles.title} numberOfLines={2}>
@@ -124,6 +160,23 @@ const styles = StyleSheet.create({
     right: theme.spacing.sm,
   },
   addIconBackground: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: theme.borderRadius.full,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bookmarkContainer: {
+    position: 'absolute',
+    top: theme.spacing.sm,
+    right: theme.spacing.sm,
+  },
+  bookmarkContainerLeft: {
+    right: 'auto',
+    left: theme.spacing.sm,
+  },
+  bookmarkBackground: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: theme.borderRadius.full,
     width: 36,

@@ -1,10 +1,14 @@
-import React, {useRef, useState, useCallback} from 'react';
+import React, {useRef, useState, useCallback, useEffect} from 'react';
 import {View, FlatList, StyleSheet, Dimensions, ViewToken} from 'react-native';
 import {useAtom} from 'jotai';
 import VideoCard from './VideoCard';
 import {VideoItem} from '../data/videoData';
 import {theme} from '../theme';
 import {videoInteractionsAtom} from '../store/videoAtoms';
+import {videoProgressAtom, getVideoProgress} from '../store/videoProgressAtoms';
+import {getEpisodesForDrama} from '../data/videoData';
+import {DramaItem} from '../data/dummyData';
+import {trendingDramas, latestReleases, forYouDramas} from '../data/dummyData';
 
 const {height: WINDOW_HEIGHT} = Dimensions.get('window');
 
@@ -12,12 +16,40 @@ interface VideoFeedProps {
   videos: VideoItem[];
   onVideoEnd?: (videoId: string) => void;
   isScreenFocused?: boolean;
+  initialDramaId?: string; // Filter videos for specific drama
 }
 
-function VideoFeed({videos, onVideoEnd: _onVideoEnd, isScreenFocused = true}: VideoFeedProps) {
+function VideoFeed({
+  videos,
+  onVideoEnd: _onVideoEnd,
+  isScreenFocused = true,
+  initialDramaId,
+}: VideoFeedProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const [interactions, setInteractions] = useAtom(videoInteractionsAtom);
+  const [videoProgress] = useAtom(videoProgressAtom);
+
+  // Filter videos by dramaId if provided
+  const filteredVideos = initialDramaId
+    ? getEpisodesForDrama(videos, initialDramaId)
+    : videos;
+
+  // Get drama item for watchlist functionality
+  const getDramaItem = (dramaId: string): DramaItem | undefined => {
+    const allDramas = [...trendingDramas, ...latestReleases, ...forYouDramas];
+    return allDramas.find(drama => drama.id === dramaId);
+  };
+
+  // Auto-scroll to first video when dramaId is provided
+  useEffect(() => {
+    if (initialDramaId && filteredVideos.length > 0 && flatListRef.current) {
+      // Small delay to ensure FlatList is rendered
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({index: 0, animated: false});
+      }, 100);
+    }
+  }, [initialDramaId, filteredVideos.length]);
 
   // Viewability configuration for detecting visible items
   const viewabilityConfig = useRef({
@@ -93,16 +125,31 @@ function VideoFeed({videos, onVideoEnd: _onVideoEnd, isScreenFocused = true}: Vi
         likes: videoInteraction.likes ?? item.likes,
       };
 
+      // Get initial progress for this video
+      const initialProgress = getVideoProgress(videoProgress, item.id);
+
+      // Get drama item for watchlist
+      const dramaItem = getDramaItem(item.dramaId);
+
       return (
-              <VideoCard
-                video={videoWithInteraction}
-                isPlaying={index === activeIndex && isScreenFocused}
-                onLike={handleLike}
-                onFollow={handleFollow}
-              />
+        <VideoCard
+          video={videoWithInteraction}
+          isPlaying={index === activeIndex && isScreenFocused}
+          initialProgress={initialProgress}
+          onLike={handleLike}
+          onFollow={handleFollow}
+          dramaItem={dramaItem}
+        />
       );
     },
-    [activeIndex, interactions, handleLike, handleFollow, isScreenFocused],
+    [
+      activeIndex,
+      interactions,
+      handleLike,
+      handleFollow,
+      isScreenFocused,
+      videoProgress,
+    ],
   );
 
   // Get item layout for performance optimization
@@ -122,7 +169,7 @@ function VideoFeed({videos, onVideoEnd: _onVideoEnd, isScreenFocused = true}: Vi
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={videos}
+        data={filteredVideos}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         pagingEnabled={true}
@@ -137,6 +184,9 @@ function VideoFeed({videos, onVideoEnd: _onVideoEnd, isScreenFocused = true}: Vi
         windowSize={5}
         removeClippedSubviews={true}
         onEndReachedThreshold={0.5}
+        onScrollToIndexFailed={() => {
+          // Handle scroll to index failure gracefully
+        }}
       />
     </View>
   );
