@@ -23,9 +23,18 @@ import ForYouScreen from './src/screens/ForYouScreen';
 import WatchlistScreen from './src/screens/WatchlistScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import HistoryScreen from './src/screens/HistoryScreen';
+import TopUpScreen from './src/screens/TopUpScreen';
+import WalletScreen from './src/screens/WalletScreen';
+import RewardsScreen from './src/screens/RewardsScreen';
+import DownloadsScreen from './src/screens/DownloadsScreen';
+import GiftsScreen from './src/screens/GiftsScreen';
+import HelpScreen from './src/screens/HelpScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const ProfileStack = createStackNavigator();
 
 // Custom dark theme for navigation
 const customDarkTheme = {
@@ -47,7 +56,7 @@ function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({route}) => ({
-        headerShown: true,
+        headerShown: false,
         headerStyle: {
           backgroundColor: theme.colors.background.secondary,
           borderBottomWidth: 1,
@@ -140,7 +149,7 @@ function TabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStackNavigator}
         options={{
           title: 'Profile',
         }}
@@ -159,6 +168,26 @@ function AuthStack() {
       }}>
       <Stack.Screen name="SignIn" component={SignInScreen} />
     </Stack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: {backgroundColor: theme.colors.background.primary},
+      }}>
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen name="History" component={HistoryScreen} />
+      <ProfileStack.Screen name="TopUp" component={TopUpScreen} />
+      <ProfileStack.Screen name="Wallet" component={WalletScreen} />
+      <ProfileStack.Screen name="Rewards" component={RewardsScreen} />
+      <ProfileStack.Screen name="Downloads" component={DownloadsScreen} />
+      <ProfileStack.Screen name="Gifts" component={GiftsScreen} />
+      <ProfileStack.Screen name="Help" component={HelpScreen} />
+      <ProfileStack.Screen name="Settings" component={SettingsScreen} />
+    </ProfileStack.Navigator>
   );
 }
 

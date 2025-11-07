@@ -7,6 +7,8 @@ export interface AuthState {
   userData?: {
     id: string;
     phoneNumber: string;
+    name?: string;
+    avatar?: string;
   };
 }
 
