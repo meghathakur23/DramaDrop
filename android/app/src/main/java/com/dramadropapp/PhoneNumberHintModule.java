@@ -65,36 +65,21 @@ public class PhoneNumberHintModule extends ReactContextBaseJavaModule {
                 .setPhoneNumberIdentifierSupported(true)
                 .build();
 
-        credentialsClient.getHintPickerIntent(hintRequest)
-                .addOnSuccessListener(result -> {
-                    try {
-                        currentActivity.startIntentSenderForResult(
-                                result.getIntentSender(),
-                                PHONE_NUMBER_HINT_REQUEST,
-                                null,
-                                0,
-                                0,
-                                0
-                        );
-                    } catch (IntentSender.SendIntentException e) {
-                        promise.reject("INTENT_ERROR", e.getMessage());
-                        phoneNumberPromise = null;
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    if (e instanceof ResolvableApiException) {
-                        ResolvableApiException resolvable = (ResolvableApiException) e;
-                        try {
-                            resolvable.startResolutionForResult(currentActivity, PHONE_NUMBER_HINT_REQUEST);
-                        } catch (IntentSender.SendIntentException sendEx) {
-                            promise.reject("RESOLUTION_ERROR", sendEx.getMessage());
-                            phoneNumberPromise = null;
-                        }
-                    } else {
-                        promise.reject("ERROR", e.getMessage());
-                        phoneNumberPromise = null;
-                    }
-                });
+        try {
+            android.app.PendingIntent pendingIntent = credentialsClient.getHintPickerIntent(hintRequest);
+            IntentSender intentSender = pendingIntent.getIntentSender();
+            currentActivity.startIntentSenderForResult(
+                    intentSender,
+                    PHONE_NUMBER_HINT_REQUEST,
+                    null,
+                    0,
+                    0,
+                    0
+            );
+        } catch (IntentSender.SendIntentException e) {
+            promise.reject("INTENT_ERROR", e.getMessage());
+            phoneNumberPromise = null;
+        }
     }
 }
 

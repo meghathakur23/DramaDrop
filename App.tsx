@@ -20,10 +20,9 @@ import {theme} from './src/theme';
 import {authAtom, initializeAuth} from './src/store/authAtoms';
 import HomeScreen from './src/screens/HomeScreen';
 import ForYouScreen from './src/screens/ForYouScreen';
-import BrowseScreen from './src/screens/BrowseScreen';
 import WatchlistScreen from './src/screens/WatchlistScreen';
-import SearchScreen from './src/screens/SearchScreen';
 import SignInScreen from './src/screens/SignInScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -75,9 +74,9 @@ function TabNavigator() {
           } else if (route.name === 'Watchlist') {
             // Bookmark/ribbon outline
             iconName = 'bookmark-outline';
-          } else if (route.name === 'Search') {
+          } else if (route.name === 'Profile') {
             // Magnifying glass outline
-            iconName = 'search-outline';
+            iconName = 'person-outline';
           } else {
             iconName = 'ellipse-outline';
           }
@@ -129,13 +128,7 @@ function TabNavigator() {
         component={ForYouScreen}
         options={{
           title: 'For You',
-        }}
-      />
-      <Tab.Screen
-        name="Browse"
-        component={BrowseScreen}
-        options={{
-          title: 'Browse',
+          headerShown: false, // Hide header for full-screen video experience
         }}
       />
       <Tab.Screen
@@ -146,10 +139,10 @@ function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Search"
-        component={SearchScreen}
+        name="Profile"
+        component={ProfileScreen}
         options={{
-          title: 'Search',
+          title: 'Profile',
         }}
       />
     </Tab.Navigator>

@@ -119,4 +119,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Google Play Services Auth for Phone Number Hint API
+    implementation 'com.google.android.gms:play-services-auth:20.0.0'
 }
