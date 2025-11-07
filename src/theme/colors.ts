@@ -20,7 +20,9 @@ export const colors = {
     dark: '#0066CC',
     light: '#33E0FF',
   },
-
+  pink: {
+    primary: '#ff4db8',
+  },
   // Neon Purple Palette
   purple: {
     primary: '#B026FF',

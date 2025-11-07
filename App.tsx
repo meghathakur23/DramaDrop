@@ -5,23 +5,28 @@
  * @format
  */
 
-import React from 'react';
-import {StatusBar, Platform} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {StatusBar, Platform, View, ActivityIndicator, StyleSheet} from 'react-native';
 import {NavigationContainer, DarkTheme} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {createStackNavigator} from '@react-navigation/stack';
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import {useAtomValue, useSetAtom} from 'jotai';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {theme} from './src/theme';
+import {authAtom, initializeAuth} from './src/store/authAtoms';
 import HomeScreen from './src/screens/HomeScreen';
 import ForYouScreen from './src/screens/ForYouScreen';
 import BrowseScreen from './src/screens/BrowseScreen';
 import WatchlistScreen from './src/screens/WatchlistScreen';
 import SearchScreen from './src/screens/SearchScreen';
+import SignInScreen from './src/screens/SignInScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
 // Custom dark theme for navigation
 const customDarkTheme = {
@@ -152,15 +157,68 @@ function TabNavigator() {
 }
 
 
+function AuthStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: {backgroundColor: theme.colors.background.primary},
+      }}>
+      <Stack.Screen name="SignIn" component={SignInScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function AppNavigator() {
+  const authState = useAtomValue(authAtom);
+  const setAuth = useSetAtom(authAtom);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Initialize auth state from AsyncStorage
+    const initAuth = async () => {
+      const initialState = await initializeAuth();
+      setAuth(initialState);
+      setIsLoading(false);
+    };
+    initAuth();
+  }, [setAuth]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.blue.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer theme={customDarkTheme}>
+      {authState.isLoggedIn ? (
+        <TabNavigator />
+      ) : (
+        <AuthStack />
+      )}
+    </NavigationContainer>
+  );
+}
+
 function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.background.primary} />
-      <NavigationContainer theme={customDarkTheme}>
-        <TabNavigator />
-      </NavigationContainer>
+      <AppNavigator />
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.primary,
+  },
+});
 
 export default App;
