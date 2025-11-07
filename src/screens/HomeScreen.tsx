@@ -1,6 +1,6 @@
 import React from 'react';
 import {ScrollView, StyleSheet} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {theme} from '../theme';
 import AppHeader from '../components/AppHeader';
 import SpotlightCarousel from '../components/SpotlightCarousel';
@@ -13,11 +13,16 @@ import {
 } from '../data/dummyData';
 
 function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  // Tab bar height is 60 + bottom inset, add extra padding for spacing
+  const tabBarHeight = 60 + insets.bottom;
+  const bottomPadding = tabBarHeight + theme.spacing.xl;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: bottomPadding}]}
         showsVerticalScrollIndicator={false}>
         <AppHeader />
         <SpotlightCarousel data={spotlightItems} />
@@ -58,7 +63,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: theme.spacing.xl,
+    // paddingBottom will be set dynamically based on tab bar height
   },
 });
 

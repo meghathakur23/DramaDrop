@@ -26,7 +26,7 @@ interface SpotlightCarouselProps {
 function SpotlightCarousel({data}: SpotlightCarouselProps) {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Auto-play carousel
@@ -64,24 +64,29 @@ function SpotlightCarousel({data}: SpotlightCarouselProps) {
       style={styles.container}
       imageStyle={styles.imageStyle}>
       <View style={styles.overlay}>
-        <Text style={styles.spotlightText}>{item.title}</Text>
+        <View style={styles.contentRow}>
+          <Text style={styles.spotlightText}>{item.title}</Text>
+          
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity style={styles.playButton}>
+              <LinearGradient
+                colors={[
+                  'rgba(0, 212, 255, 0.3)',
+                  'rgba(176, 38, 255, 0.3)',
+                ]}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 0}}
+                style={styles.gradient}>
+                <Icon name="play" size={18} color={theme.colors.text.primary} />
+                <Text style={styles.playButtonText}>Play</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-        <View style={styles.buttonsContainer}>
-          <TouchableOpacity style={styles.playButton}>
-            <LinearGradient
-              colors={[theme.colors.blue.primary, theme.colors.purple.primary]}
-              start={{x: 0, y: 0}}
-              end={{x: 1, y: 0}}
-              style={styles.gradient}>
-              <Icon name="play" size={20} color={theme.colors.text.primary} />
-              <Text style={styles.playButtonText}>Play</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.saveButton}>
-            <Icon name="add" size={20} color={theme.colors.text.primary} />
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.saveButton}>
+              <Icon name="add" size={18} color={theme.colors.text.primary} />
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </ImageBackground>
@@ -105,7 +110,7 @@ function SpotlightCarousel({data}: SpotlightCarouselProps) {
           index,
         })}
         onScrollToIndexFailed={info => {
-          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          const wait = new Promise<void>(resolve => setTimeout(resolve, 500));
           wait.then(() => {
             flatListRef.current?.scrollToIndex({
               index: info.index,
@@ -149,31 +154,39 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     paddingHorizontal: theme.spacing.base,
   },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
   spotlightText: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
+    flexShrink: 1,
   },
   buttonsContainer: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
+    alignItems: 'center',
   },
   playButton: {
-    flex: 1,
-    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
   },
   gradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.xs,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 212, 255, 0.5)',
   },
   playButtonText: {
-    fontSize: theme.typography.fontSize.base,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
   },
@@ -182,13 +195,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   saveButtonText: {
-    fontSize: theme.typography.fontSize.base,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.medium,
     color: theme.colors.text.primary,
   },
