@@ -116,6 +116,7 @@ function TabNavigator() {
         component={HomeScreen}
         options={{
           title: 'Home',
+          headerShown: false, // Hide default header since we have custom AppHeader
         }}
       />
       <Tab.Screen
