@@ -1,10 +1,17 @@
 import React from 'react';
-import {View, Text, Image, StyleSheet, TouchableOpacity} from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import {View, Text, Image, StyleSheet, TouchableOpacity, Dimensions} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useAtom} from 'jotai';
 import {theme} from '../theme';
 import {DramaItem} from '../data/dummyData';
 import {isInWatchlistAtom} from '../store/watchlistAtoms';
+
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const NUM_COLUMNS = 3;
+const HORIZONTAL_PADDING = theme.spacing.sm * 2; // Left + right padding (reduced from base to sm)
+const CARD_GAP = theme.spacing.sm; // Spacing between cards
+// Calculate card width: (screen width - horizontal padding - gaps between cards) / number of columns
+const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING - (CARD_GAP * (NUM_COLUMNS - 1))) / NUM_COLUMNS;
 
 interface DramaCardProps {
   item: DramaItem;
@@ -24,13 +31,6 @@ function DramaCard({
   const isInWatchlist = useAtom(isInWatchlistAtom)[0];
   const isSaved = isInWatchlist(item.id);
 
-  const handleSavePress = (e: any) => {
-    e.stopPropagation();
-    if (onSavePress) {
-      onSavePress(item);
-    }
-  };
-
   return (
     <TouchableOpacity
       style={styles.container}
@@ -39,63 +39,31 @@ function DramaCard({
       <View style={styles.imageContainer}>
         <Image source={item.image} style={styles.image} resizeMode="cover" />
         
-        {/* Episode Info Badge */}
-        {item.episodeInfo && (
-          <View style={styles.episodeBadge}>
-            <Text style={styles.episodeText}>{item.episodeInfo}</Text>
+        {/* Members Only Badge (shown for premium content, only if not following) */}
+        {item.isPremium && !isSaved && (
+          <View style={styles.membersOnlyBadge}>
+            <LinearGradient
+              colors={['#FFD700', '#FFA500', '#FFD700']}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              style={styles.membersOnlyGradient}>
+              <Text style={styles.membersOnlyText}>Members Only</Text>
+            </LinearGradient>
           </View>
         )}
 
-        {/* Match Percentage Badge */}
-        {item.matchPercentage !== undefined && (
-          <View style={styles.matchBadge}>
-            <Text style={styles.matchText}>Match {item.matchPercentage}%</Text>
+        {/* Following Text Badge (shown when saved, positioned at top-right edge) */}
+        {isSaved && (
+          <View style={styles.followingBadge}>
+            <LinearGradient
+              colors={[theme.colors.blue.primary, theme.colors.pink.primary, theme.colors.purple.primary]}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              style={styles.followingGradient}>
+              <Text style={styles.followingText}>Following</Text>
+            </LinearGradient>
           </View>
         )}
-
-        {/* Play Icon Overlay */}
-        {showPlayIcon && (
-          <View style={styles.playIconContainer}>
-            <View style={styles.playIconBackground}>
-              <Icon name="play" size={20} color={theme.colors.text.primary} />
-            </View>
-          </View>
-        )}
-
-        {/* Add Icon Overlay */}
-        {showAddIcon && (
-          <View style={styles.addIconContainer}>
-            <View style={styles.addIconBackground}>
-              <Icon name="add" size={20} color={theme.colors.text.primary} />
-            </View>
-          </View>
-        )}
-
-        {/* Premium Lock Overlay */}
-        {item.isPremium && (
-          <View style={styles.premiumLockOverlay}>
-            <View style={styles.premiumLockContainer}>
-              <Icon name="lock-closed" size={24} color={theme.colors.text.primary} />
-            </View>
-          </View>
-        )}
-
-        {/* Bookmark Button (always visible, positioned on left if other icons present) */}
-        <TouchableOpacity
-          style={[
-            styles.bookmarkContainer,
-            (showPlayIcon || showAddIcon) && styles.bookmarkContainerLeft,
-          ]}
-          onPress={handleSavePress}
-          activeOpacity={0.7}>
-          <View style={styles.bookmarkBackground}>
-            <Icon
-              name={isSaved ? 'bookmark' : 'bookmark-outline'}
-              size={20}
-              color={isSaved ? theme.colors.blue.primary : theme.colors.text.primary}
-            />
-          </View>
-        </TouchableOpacity>
       </View>
       
       <Text style={styles.title} numberOfLines={2}>
@@ -107,112 +75,60 @@ function DramaCard({
 
 const styles = StyleSheet.create({
   container: {
-    width: 140,
-    marginRight: theme.spacing.base,
+    width: CARD_WIDTH,
+    marginRight: CARD_GAP, // Add spacing between cards
   },
   imageContainer: {
     width: '100%',
-    height: 200,
+    height: CARD_WIDTH * 1.4, // Maintain aspect ratio (approximately 1.4:1)
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs / 2, // Reduce space between image and title
     position: 'relative',
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  episodeBadge: {
+  membersOnlyBadge: {
     position: 'absolute',
-    top: theme.spacing.sm,
-    left: theme.spacing.sm,
-    backgroundColor: theme.colors.purple.primary,
+    top: 0,
+    right: 0,
+    borderTopRightRadius: theme.borderRadius.lg,
+    borderBottomLeftRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+  },
+  membersOnlyGradient: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.xs / 2,
   },
-  episodeText: {
-    color: theme.colors.text.primary,
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.medium,
+  membersOnlyText: {
+    fontSize: 10,
+    fontWeight: theme.typography.fontWeight.regular,
+    color: '#000000',
   },
-  matchBadge: {
+  followingBadge: {
     position: 'absolute',
-    top: theme.spacing.sm,
-    left: theme.spacing.sm,
-    backgroundColor: theme.colors.purple.primary,
+    top: 0,
+    right: 0,
+    borderTopRightRadius: theme.borderRadius.lg,
+    borderBottomLeftRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+  },
+  followingGradient: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.xs / 2,
   },
-  matchText: {
+  followingText: {
+    fontSize: 10,
+    fontWeight: theme.typography.fontWeight.regular,
     color: theme.colors.text.primary,
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
-  playIconContainer: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-  },
-  playIconBackground: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: theme.borderRadius.full,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addIconContainer: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-  },
-  addIconBackground: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: theme.borderRadius.full,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookmarkContainer: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-  },
-  bookmarkContainerLeft: {
-    right: 'auto',
-    left: theme.spacing.sm,
-  },
-  bookmarkBackground: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: theme.borderRadius.full,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   title: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.medium,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.regular,
     color: theme.colors.text.primary,
-    marginTop: theme.spacing.xs,
-  },
-  premiumLockOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: theme.borderRadius.lg,
-  },
-  premiumLockContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: theme.borderRadius.full,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 0, // Remove margin top to reduce space between card and title
   },
 });
 

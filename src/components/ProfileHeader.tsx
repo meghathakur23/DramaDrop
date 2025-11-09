@@ -1,12 +1,14 @@
 import React from 'react';
 import {View, Text, Image, StyleSheet, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import {useNavigation} from '@react-navigation/native';
 import {useAtomValue} from 'jotai';
 import {theme} from '../theme';
 import {profileAtom} from '../store/profileAtoms';
 import {authAtom} from '../store/authAtoms';
 
 function ProfileHeader() {
+  const navigation = useNavigation();
   const profile = useAtomValue(profileAtom);
   const auth = useAtomValue(authAtom);
 
@@ -37,11 +39,13 @@ function ProfileHeader() {
         </View>
       </View>
 
-      {/* Message/Notification Icon */}
-      <TouchableOpacity style={styles.messageButton} activeOpacity={0.7}>
-        <View style={styles.messageIconContainer}>
-          <Icon name="mail-outline" size={24} color={theme.colors.text.primary} />
-        </View>
+      {/* Coins Display */}
+      <TouchableOpacity 
+        style={styles.coinsContainer}
+        activeOpacity={0.7}
+        onPress={() => (navigation as any)?.navigate('Wallet')}>
+        <Icon name="logo-bitcoin" size={20} color="#FFD700" style={styles.coinIcon} />
+        <Text style={styles.coinsText}>{profile.wallet.coins}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -95,21 +99,23 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
   },
-  messageButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
+  coinsContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  messageIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     backgroundColor: theme.colors.background.elevated,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border.primary,
+  },
+  coinIcon: {
+    marginRight: theme.spacing.xs,
+  },
+  coinsText: {
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.semiBold,
+    color: theme.colors.text.primary,
   },
 });
 

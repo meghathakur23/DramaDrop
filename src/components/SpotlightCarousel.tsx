@@ -145,11 +145,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   imageStyle: {
-    opacity: 0.7,
+    opacity: 1,
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
     padding: theme.spacing.lg,
     paddingHorizontal: theme.spacing.base,

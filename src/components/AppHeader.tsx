@@ -1,15 +1,35 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, TextInput, StyleSheet} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import {useNavigation} from '@react-navigation/native';
 import {theme} from '../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 function AppHeader() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+
+  const handleSearchPress = () => {
+    (navigation as any).navigate('Search');
+  };
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
-      <Text style={styles.logo}>DramaDrop</Text>
+      <TouchableOpacity 
+        style={styles.searchContainer}
+        onPress={handleSearchPress}
+        activeOpacity={0.7}>
+        <Icon name="search" size={18} color={theme.colors.text.secondary} style={styles.searchIcon} />
+        <View style={styles.searchPlaceholder}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search dramas..."
+            placeholderTextColor={theme.colors.text.tertiary}
+            editable={false}
+            pointerEvents="none"
+          />
+        </View>
+      </TouchableOpacity>
       <View style={styles.iconsContainer}>
         <TouchableOpacity style={styles.iconButton}>
           <Icon name="notifications-outline" size={24} color={theme.colors.text.primary} />
@@ -31,10 +51,28 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.background.primary,
   },
-  logo: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold,
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.elevated,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginRight: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  searchIcon: {
+    marginRight: theme.spacing.sm,
+  },
+  searchPlaceholder: {
+    flex: 1,
+  },
+  searchInput: {
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.primary,
+    padding: 0,
   },
   iconsContainer: {
     flexDirection: 'row',

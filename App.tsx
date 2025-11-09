@@ -33,6 +33,7 @@ import GiftsScreen from './src/screens/GiftsScreen';
 import HelpScreen from './src/screens/HelpScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import SubscriptionScreen from './src/screens/SubscriptionScreen';
+import SearchScreen from './src/screens/SearchScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -62,6 +63,7 @@ function MainStackNavigator() {
       }}>
       <MainStack.Screen name="Tabs" component={TabNavigator} />
       <MainStack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
+      <MainStack.Screen name="Search" component={SearchScreen} />
     </MainStack.Navigator>
   );
 }

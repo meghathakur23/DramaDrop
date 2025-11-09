@@ -1,12 +1,12 @@
-import React, {useEffect} from 'react';
-import {ScrollView, StyleSheet} from 'react-native';
+import React, {useEffect, useMemo} from 'react';
+import {FlatList, StyleSheet, View} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useAtom, useSetAtom} from 'jotai';
 import {theme} from '../theme';
 import AppHeader from '../components/AppHeader';
 import SpotlightCarousel from '../components/SpotlightCarousel';
-import HorizontalDramaList from '../components/HorizontalDramaList';
+import DramaCard from '../components/DramaCard';
 import {
   trendingDramas,
   latestReleases,
@@ -22,6 +22,8 @@ import {
   initializeWatchlist,
 } from '../store/watchlistAtoms';
 
+const NUM_COLUMNS = 3;
+
 function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -36,6 +38,11 @@ function HomeScreen() {
     };
     initWatchlist();
   }, [setWatchlistAtom]);
+
+  // Combine all dramas: Trending → Latest Releases → For You
+  const allDramas = useMemo(() => {
+    return [...trendingDramas, ...latestReleases, ...forYouDramas];
+  }, []);
 
   // Tab bar height is 60 + bottom inset, add extra padding for spacing
   const tabBarHeight = 60 + insets.bottom;
@@ -71,44 +78,51 @@ function HomeScreen() {
     }
   };
 
+  // Determine which icons to show based on which section the drama came from
+  const getDramaProps = (item: DramaItem) => {
+    const isFromLatestReleases = latestReleases.some(d => d.id === item.id);
+    const isFromForYou = forYouDramas.some(d => d.id === item.id);
+    
+    return {
+      showPlayIcon: isFromLatestReleases,
+      showAddIcon: isFromForYou,
+    };
+  };
+
+  const renderDramaCard = ({item}: {item: DramaItem}) => {
+    const {showPlayIcon, showAddIcon} = getDramaProps(item);
+    return (
+      <DramaCard
+        item={item}
+        showPlayIcon={showPlayIcon}
+        showAddIcon={showAddIcon}
+        onPress={() => handleDramaPress(item)}
+        onSavePress={() => handleDramaSave(item)}
+      />
+    );
+  };
+
+  const renderHeader = () => (
+    <View>
+      <AppHeader />
+      <View style={styles.spotlightWrapper}>
+        <SpotlightCarousel data={spotlightItems} />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: bottomPadding}]}
-        showsVerticalScrollIndicator={false}>
-        <AppHeader />
-        <SpotlightCarousel data={spotlightItems} />
-        
-        <HorizontalDramaList
-          title="Trending Dramas"
-          actionText="See all"
-          data={trendingDramas}
-          onActionPress={() => {}}
-          onDramaPress={handleDramaPress}
-          onDramaSave={handleDramaSave}
-        />
-        
-        <HorizontalDramaList
-          title="Latest Releases"
-          actionText="View"
-          data={latestReleases}
-          onActionPress={() => {}}
-          showPlayIcon={true}
-          onDramaPress={handleDramaPress}
-          onDramaSave={handleDramaSave}
-        />
-        
-        <HorizontalDramaList
-          title="For You"
-          actionText="Refresh"
-          data={forYouDramas}
-          onActionPress={() => {}}
-          showAddIcon={true}
-          onDramaPress={handleDramaPress}
-          onDramaSave={handleDramaSave}
-        />
-      </ScrollView>
+      <FlatList
+        data={allDramas}
+        renderItem={renderDramaCard}
+        keyExtractor={item => item.id}
+        numColumns={NUM_COLUMNS}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={[styles.listContent, {paddingBottom: bottomPadding}]}
+        columnWrapperStyle={styles.row}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
@@ -118,11 +132,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background.primary,
   },
-  scrollView: {
-    flex: 1,
+  listContent: {
+    paddingHorizontal: theme.spacing.sm, // Reduced from base (16px) to sm (8px)
+    paddingTop: theme.spacing.sm,
   },
-  scrollContent: {
-    // paddingBottom will be set dynamically based on tab bar height
+  row: {
+    marginBottom: theme.spacing.md,
+  },
+  spotlightWrapper: {
+    marginHorizontal: -theme.spacing.sm, // Negative margin to counteract listContent padding
   },
 });
 
