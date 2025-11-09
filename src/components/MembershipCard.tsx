@@ -2,20 +2,33 @@ import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import {useAtom, useAtomValue} from 'jotai';
+import {useAtom} from 'jotai';
+import {useNavigation} from '@react-navigation/native';
 import {theme} from '../theme';
-import {profileAtom, updateMembership} from '../store/profileAtoms';
+import {
+  subscriptionAtom,
+  initializeSubscription,
+} from '../store/subscriptionAtoms';
+import {checkSubscriptionStatus} from '../services/subscriptionService';
 
 function MembershipCard() {
-  const profile = useAtomValue(profileAtom);
-  const [, setProfile] = useAtom(profileAtom);
-  const {membership} = profile;
+  const navigation = useNavigation();
+  const [subscription, setSubscription] = useAtom(subscriptionAtom);
+  const subscriptionStatus = checkSubscriptionStatus(subscription);
 
   const handleActivate = async () => {
-    // Mock membership activation
-    const updated = await updateMembership(profile, true, 'vip');
-    setProfile(updated);
+    // Navigate to subscription screen for activation
+    (navigation as any).navigate('Subscription');
   };
+
+  // Initialize subscription on mount
+  React.useEffect(() => {
+    const init = async () => {
+      const sub = await initializeSubscription();
+      setSubscription(sub);
+    };
+    init();
+  }, [setSubscription]);
 
   return (
     <View style={styles.container}>
@@ -25,9 +38,9 @@ function MembershipCard() {
         end={{x: 1, y: 1}}
         style={styles.gradient}>
         {/* Discount Badge */}
-        {membership.discountPercentage && !membership.isMember && (
+        {!subscription.isActive && (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{membership.discountPercentage}% off</Text>
+            <Text style={styles.discountText}>48% off</Text>
           </View>
         )}
 
@@ -44,13 +57,17 @@ function MembershipCard() {
           <Text style={styles.benefitsTitle}>Enjoy these exclusive benefits:</Text>
             </View>
    
-            {!membership.isMember && (
+            {!subscription.isActive ? (
               <TouchableOpacity
                 style={styles.activateButton}
                 onPress={handleActivate}
                 activeOpacity={0.8}>
                 <Text style={styles.activateButtonText}>Activate</Text>
               </TouchableOpacity>
+            ) : subscriptionStatus.daysRemaining !== undefined && (
+              <Text style={styles.expiryText}>
+                {subscriptionStatus.daysRemaining} days left
+              </Text>
             )}
           </View>
 
@@ -145,6 +162,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
+  },
+  expiryText: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   benefitsTitle: {
     fontSize: theme.typography.fontSize.xs,

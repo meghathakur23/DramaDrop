@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "585530120655",
+    "project_id": "dramadrop-13cb2",
+    "storage_bucket": "dramadrop-13cb2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:585530120655:android:09635b904ab30af2dd9aba",
+        "android_client_info": {
+          "package_name": "com.dramadropapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9siR5-EDRXxTrnj0Hvzot9fn5Dcj9pPc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

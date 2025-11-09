@@ -1,14 +1,15 @@
 import React, {useRef, useState, useCallback, useEffect} from 'react';
 import {View, FlatList, StyleSheet, Dimensions, ViewToken} from 'react-native';
-import {useAtom} from 'jotai';
+import {useAtom, useSetAtom} from 'jotai';
 import VideoCard from './VideoCard';
 import {VideoItem} from '../data/videoData';
 import {theme} from '../theme';
 import {videoInteractionsAtom} from '../store/videoAtoms';
 import {videoProgressAtom, getVideoProgress} from '../store/videoProgressAtoms';
-import {getEpisodesForDrama} from '../data/videoData';
-import {DramaItem} from '../data/dummyData';
-import {trendingDramas, latestReleases, forYouDramas} from '../data/dummyData';
+import {
+  watchHistoryAtom,
+  addToHistory,
+} from '../store/watchHistoryAtoms';
 
 const {height: WINDOW_HEIGHT} = Dimensions.get('window');
 
@@ -16,40 +17,19 @@ interface VideoFeedProps {
   videos: VideoItem[];
   onVideoEnd?: (videoId: string) => void;
   isScreenFocused?: boolean;
-  initialDramaId?: string; // Filter videos for specific drama
 }
 
 function VideoFeed({
   videos,
   onVideoEnd: _onVideoEnd,
   isScreenFocused = true,
-  initialDramaId,
 }: VideoFeedProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const [interactions, setInteractions] = useAtom(videoInteractionsAtom);
   const [videoProgress] = useAtom(videoProgressAtom);
-
-  // Filter videos by dramaId if provided
-  const filteredVideos = initialDramaId
-    ? getEpisodesForDrama(videos, initialDramaId)
-    : videos;
-
-  // Get drama item for watchlist functionality
-  const getDramaItem = (dramaId: string): DramaItem | undefined => {
-    const allDramas = [...trendingDramas, ...latestReleases, ...forYouDramas];
-    return allDramas.find(drama => drama.id === dramaId);
-  };
-
-  // Auto-scroll to first video when dramaId is provided
-  useEffect(() => {
-    if (initialDramaId && filteredVideos.length > 0 && flatListRef.current) {
-      // Small delay to ensure FlatList is rendered
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({index: 0, animated: false});
-      }, 100);
-    }
-  }, [initialDramaId, filteredVideos.length]);
+  const [watchHistory, setWatchHistory] = useAtom(watchHistoryAtom);
+  const setWatchHistoryAtom = useSetAtom(watchHistoryAtom);
 
   // Viewability configuration for detecting visible items
   const viewabilityConfig = useRef({
@@ -59,15 +39,33 @@ function VideoFeed({
 
   // Handle when viewable items change
   const onViewableItemsChanged = useCallback(
-    ({viewableItems}: {viewableItems: ViewToken[]}) => {
+    async ({viewableItems}: {viewableItems: ViewToken[]}) => {
       if (viewableItems.length > 0) {
         const newActiveIndex = viewableItems[0].index ?? 0;
         if (newActiveIndex !== activeIndex) {
           setActiveIndex(newActiveIndex);
+          
+          // Track video in watch history when it becomes active
+          if (isScreenFocused && videos[newActiveIndex]) {
+            const activeVideo = videos[newActiveIndex];
+            const progress = getVideoProgress(videoProgress, activeVideo.id);
+            
+            const updatedHistory = await addToHistory(
+              watchHistory,
+              {
+                videoId: activeVideo.id,
+                title: activeVideo.title,
+                author: activeVideo.author,
+                duration: activeVideo.duration,
+              },
+              progress,
+            );
+            setWatchHistoryAtom(updatedHistory);
+          }
         }
       }
     },
-    [activeIndex],
+    [activeIndex, isScreenFocused, videos, videoProgress, watchHistory, setWatchHistoryAtom],
   );
 
   const viewabilityConfigCallbackPairs = useRef([
@@ -128,9 +126,6 @@ function VideoFeed({
       // Get initial progress for this video
       const initialProgress = getVideoProgress(videoProgress, item.id);
 
-      // Get drama item for watchlist
-      const dramaItem = getDramaItem(item.dramaId);
-
       return (
         <VideoCard
           video={videoWithInteraction}
@@ -138,7 +133,6 @@ function VideoFeed({
           initialProgress={initialProgress}
           onLike={handleLike}
           onFollow={handleFollow}
-          dramaItem={dramaItem}
         />
       );
     },
@@ -169,7 +163,7 @@ function VideoFeed({
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={filteredVideos}
+        data={videos}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         pagingEnabled={true}

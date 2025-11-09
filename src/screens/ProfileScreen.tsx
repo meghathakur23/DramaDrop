@@ -75,6 +75,11 @@ function ProfileScreen() {
       onPress: () => (navigation as any).navigate('Gifts'),
     },
     {
+      icon: 'diamond-outline',
+      title: 'Subscriptions',
+      onPress: () => (navigation as any).navigate('Subscription'),
+    },
+    {
       icon: 'help-circle-outline',
       title: 'Help & feedback',
       onPress: () => (navigation as any).navigate('Help'),

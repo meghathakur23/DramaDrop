@@ -7,7 +7,7 @@
 
 import React, {useEffect, useState} from 'react';
 import {StatusBar, Platform, View, ActivityIndicator, StyleSheet} from 'react-native';
-import {NavigationContainer, DarkTheme} from '@react-navigation/native';
+import {NavigationContainer, DarkTheme, useNavigation} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createStackNavigator} from '@react-navigation/stack';
 import {
@@ -32,6 +32,7 @@ import DownloadsScreen from './src/screens/DownloadsScreen';
 import GiftsScreen from './src/screens/GiftsScreen';
 import HelpScreen from './src/screens/HelpScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import SubscriptionScreen from './src/screens/SubscriptionScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -186,6 +187,42 @@ function AuthStack() {
   );
 }
 
+// Wrapper component to hide tab bar for profile sub-screens
+function withHiddenTabBar<T extends React.ComponentType<any>>(
+  Component: T,
+  showTabBar: boolean = false,
+): React.ComponentType<any> {
+  return function WrappedComponent(props: any) {
+    const insets = useSafeAreaInsets();
+    const navigation = useNavigation();
+
+    React.useEffect(() => {
+      const tabNavigator = navigation.getParent();
+      if (tabNavigator && 'setOptions' in tabNavigator) {
+        if (showTabBar) {
+          (tabNavigator as any).setOptions({
+            tabBarStyle: {
+              borderTopWidth: 0,
+              paddingTop: 0,
+              paddingBottom: Math.max(insets.bottom, theme.spacing.sm),
+              height: 60 + insets.bottom,
+              position: 'absolute',
+              display: 'flex',
+            },
+          });
+        } else {
+          (tabNavigator as any).setOptions({
+            tabBarStyle: {display: 'none'},
+          });
+        }
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [navigation, insets.bottom]);
+
+    return <Component {...props} />;
+  };
+}
+
 function ProfileStackNavigator() {
   return (
     <ProfileStack.Navigator
@@ -193,15 +230,16 @@ function ProfileStackNavigator() {
         headerShown: false,
         cardStyle: {backgroundColor: theme.colors.background.primary},
       }}>
-      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
-      <ProfileStack.Screen name="History" component={HistoryScreen} />
-      <ProfileStack.Screen name="TopUp" component={TopUpScreen} />
-      <ProfileStack.Screen name="Wallet" component={WalletScreen} />
-      <ProfileStack.Screen name="Rewards" component={RewardsScreen} />
-      <ProfileStack.Screen name="Downloads" component={DownloadsScreen} />
-      <ProfileStack.Screen name="Gifts" component={GiftsScreen} />
-      <ProfileStack.Screen name="Help" component={HelpScreen} />
-      <ProfileStack.Screen name="Settings" component={SettingsScreen} />
+      <ProfileStack.Screen name="ProfileMain" component={withHiddenTabBar(ProfileScreen, true)} />
+      <ProfileStack.Screen name="History" component={withHiddenTabBar(HistoryScreen, false)} />
+      <ProfileStack.Screen name="TopUp" component={withHiddenTabBar(TopUpScreen, false)} />
+      <ProfileStack.Screen name="Wallet" component={withHiddenTabBar(WalletScreen, false)} />
+      <ProfileStack.Screen name="Rewards" component={withHiddenTabBar(RewardsScreen, false)} />
+      <ProfileStack.Screen name="Downloads" component={withHiddenTabBar(DownloadsScreen, false)} />
+      <ProfileStack.Screen name="Gifts" component={withHiddenTabBar(GiftsScreen, false)} />
+      <ProfileStack.Screen name="Help" component={withHiddenTabBar(HelpScreen, false)} />
+      <ProfileStack.Screen name="Settings" component={withHiddenTabBar(SettingsScreen, false)} />
+      <ProfileStack.Screen name="Subscription" component={withHiddenTabBar(SubscriptionScreen, false)} />
     </ProfileStack.Navigator>
   );
 }

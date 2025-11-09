@@ -35,8 +35,8 @@ function WatchlistScreen() {
   }, [setWatchlist]);
 
   const handleDramaPress = (item: DramaItem) => {
-    // Navigate to VideoPlayer screen with dramaId
-    (navigation as any).navigate('VideoPlayer', {dramaId: item.id});
+    // Navigate to VideoPlayer screen with videoId
+    (navigation as any).navigate('VideoPlayer', {videoId: item.id});
   };
 
   const handleDramaSave = async (item: DramaItem) => {

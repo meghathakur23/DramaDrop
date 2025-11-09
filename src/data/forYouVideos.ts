@@ -1,14 +1,11 @@
 /**
  * For You feed video data
  * Short-form, curated content for the vertical video feed
- * Different logic from drama-specific episodes
  */
 
-import {ImageSourcePropType} from 'react-native';
 import {VideoItem} from './videoData';
 
 // For You videos are standalone short-form content
-// Not organized by drama/episode structure
 export const forYouVideos: VideoItem[] = [
   {
     id: 'foryou-1',
@@ -17,14 +14,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data1.png'),
     author: '@ActionHero',
     likes: 12500,
-    episodes: 0, // Not part of a series
     shares: 320,
     duration: '45s',
     description: 'The most intense fight scene you\'ll see today! 🔥',
     isLiked: false,
     isFollowing: false,
-    dramaId: '', // Not linked to a drama
-    episodeNumber: 0,
+    isPremium: false,
   },
   {
     id: 'foryou-2',
@@ -33,14 +28,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data2.png'),
     author: '@DramaQueen',
     likes: 8900,
-    episodes: 0,
     shares: 210,
     duration: '1m 20s',
     description: 'This scene will make you cry 😭',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: true,
   },
   {
     id: 'foryou-3',
@@ -49,14 +42,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data3.png'),
     author: '@FunnyBones',
     likes: 15600,
-    episodes: 0,
     shares: 450,
     duration: '30s',
     description: 'Laugh out loud moments! 😂',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: false,
   },
   {
     id: 'foryou-4',
@@ -65,14 +56,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data4.png'),
     author: '@LoveStories',
     likes: 11200,
-    episodes: 0,
     shares: 280,
     duration: '1m',
     description: 'The perfect romantic moment 💕',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: true,
   },
   {
     id: 'foryou-5',
@@ -81,14 +70,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data5.png'),
     author: '@SuspenseMaster',
     likes: 9800,
-    episodes: 0,
     shares: 195,
     duration: '55s',
     description: 'Edge of your seat suspense! 🎬',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: false,
   },
   {
     id: 'foryou-6',
@@ -97,14 +84,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data1.png'),
     author: '@ThrillSeeker',
     likes: 13400,
-    episodes: 0,
     shares: 310,
     duration: '40s',
     description: 'Non-stop action from start to finish! 💥',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: true,
   },
   {
     id: 'foryou-7',
@@ -113,14 +98,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data2.png'),
     author: '@PlotTwist',
     likes: 10200,
-    episodes: 0,
     shares: 240,
     duration: '1m 10s',
     description: 'You won\'t see this coming! 🤯',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: false,
   },
   {
     id: 'foryou-8',
@@ -129,14 +112,12 @@ export const forYouVideos: VideoItem[] = [
     thumbnail: require('../images/data3.png'),
     author: '@FeelGood',
     likes: 11800,
-    episodes: 0,
     shares: 290,
     duration: '50s',
     description: 'This will warm your heart ❤️',
     isLiked: false,
     isFollowing: false,
-    dramaId: '',
-    episodeNumber: 0,
+    isPremium: true,
   },
 ];
 

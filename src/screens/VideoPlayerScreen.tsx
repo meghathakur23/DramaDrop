@@ -3,7 +3,7 @@ import {StyleSheet, View, StatusBar} from 'react-native';
 import {useFocusEffect, useRoute} from '@react-navigation/native';
 import {useSetAtom} from 'jotai';
 import VideoFeed from '../components/VideoFeed';
-import {dramaEpisodes, getEpisodesForDrama} from '../data/videoData';
+import {allVideos, VideoItem} from '../data/videoData';
 import {theme} from '../theme';
 import {
   watchlistAtom,
@@ -15,25 +15,33 @@ import {
 } from '../store/videoProgressAtoms';
 
 interface RouteParams {
-  dramaId: string;
+  videoId?: string;
+  videos?: VideoItem[];
 }
 
 function VideoPlayerScreen() {
   const [isFocused, setIsFocused] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const route = useRoute();
   const params = (route.params as RouteParams) || {};
-  const dramaId = params.dramaId;
+  const {videoId, videos: routeVideos} = params;
   const setWatchlist = useSetAtom(watchlistAtom);
   const setVideoProgress = useSetAtom(videoProgressAtom);
 
   // Initialize watchlist and video progress on mount
   useEffect(() => {
     const initializeData = async () => {
-      const watchlistData = await initializeWatchlist();
-      setWatchlist(watchlistData);
+      try {
+        const watchlistData = await initializeWatchlist();
+        setWatchlist(watchlistData);
 
-      const progressData = await initializeVideoProgress();
-      setVideoProgress(progressData);
+        const progressData = await initializeVideoProgress();
+        setVideoProgress(progressData);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing video player data:', error);
+        setIsInitialized(true); // Still allow playback even if initialization fails
+      }
     };
     initializeData();
   }, [setWatchlist, setVideoProgress]);
@@ -50,27 +58,35 @@ function VideoPlayerScreen() {
     }, []),
   );
 
-  const handleVideoEnd = (videoId: string) => {
-    console.log('Video ended:', videoId);
+  const handleVideoEnd = (endedVideoId: string) => {
+    console.log('Video ended:', endedVideoId);
     // Handle video end logic (e.g., analytics, next video suggestion)
   };
 
-  // Filter videos for the specific drama
-  const dramaVideos = dramaId ? getEpisodesForDrama(dramaEpisodes, dramaId) : [];
-
-  // Log for debugging
-  useEffect(() => {
-    if (dramaId) {
-      console.log('VideoPlayerScreen - dramaId:', dramaId);
-      console.log('VideoPlayerScreen - found episodes:', dramaVideos.length);
-      if (dramaVideos.length === 0) {
-        console.warn('No episodes found for dramaId:', dramaId);
-      }
+  // Determine which videos to show
+  let videosToShow: VideoItem[] = allVideos;
+  
+  if (routeVideos && routeVideos.length > 0) {
+    // If specific videos provided, start with those and then continue with all videos
+    const firstVideo = routeVideos[0];
+    const remainingVideos = allVideos.filter(v => v.id !== firstVideo.id);
+    videosToShow = [firstVideo, ...remainingVideos];
+  } else if (videoId) {
+    // If videoId provided, find that video and show it with others
+    const videoIndex = allVideos.findIndex(v => v.id === videoId);
+    if (videoIndex !== -1) {
+      // Start from the selected video
+      videosToShow = [
+        ...allVideos.slice(videoIndex),
+        ...allVideos.slice(0, videoIndex),
+      ];
     }
-  }, [dramaId, dramaVideos.length]);
+  }
 
-  // If no dramaId provided or no episodes found, show all episodes as fallback
-  const videosToShow = dramaId && dramaVideos.length > 0 ? dramaVideos : dramaEpisodes;
+  // Don't render until progress is initialized to ensure progress is loaded
+  if (!isInitialized) {
+    return <View style={styles.container} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -78,7 +94,6 @@ function VideoPlayerScreen() {
         videos={videosToShow}
         onVideoEnd={handleVideoEnd}
         isScreenFocused={isFocused}
-        initialDramaId={dramaId}
       />
     </View>
   );

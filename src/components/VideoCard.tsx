@@ -11,20 +11,16 @@ import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useAtom} from 'jotai';
+import {useNavigation} from '@react-navigation/native';
+import {useAtom, useAtomValue} from 'jotai';
 import {VideoItem} from '../data/videoData';
 import {theme} from '../theme';
-import {
-  watchlistAtom,
-  addToWatchlist,
-  removeFromWatchlist,
-  isInWatchlistAtom,
-} from '../store/watchlistAtoms';
 import {
   videoProgressAtom,
   updateVideoProgress,
 } from '../store/videoProgressAtoms';
-import {DramaItem} from '../data/dummyData';
+import {resolveVideoSource} from '../utils/videoSourceResolver';
+import {isPremiumAtom} from '../store/subscriptionAtoms';
 
 const {height: WINDOW_HEIGHT, width: WINDOW_WIDTH} = Dimensions.get('window');
 
@@ -34,7 +30,6 @@ interface VideoCardProps {
   initialProgress?: number; // Time in seconds to resume from
   onLike?: (videoId: string) => void;
   onFollow?: (author: string) => void;
-  dramaItem?: DramaItem; // Drama item for watchlist
 }
 
 function VideoCard({
@@ -43,7 +38,6 @@ function VideoCard({
   initialProgress = 0,
   onLike,
   onFollow,
-  dramaItem,
 }: VideoCardProps) {
   const [paused, setPaused] = useState(!isPlaying);
   const [isMuted, setIsMuted] = useState(false);
@@ -54,19 +48,22 @@ function VideoCard({
   const [hasSeeked, setHasSeeked] = useState(false);
   // Use safe area insets with fallback
   const safeAreaInsets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const insets = safeAreaInsets || {top: 0, bottom: 0, left: 0, right: 0};
   const videoRef = useRef<any>(null);
-  const [watchlist, setWatchlist] = useAtom(watchlistAtom);
   const [videoProgress, setVideoProgress] = useAtom(videoProgressAtom);
-  const isInWatchlist = useAtom(isInWatchlistAtom)[0];
+  const isPremium = useAtomValue(isPremiumAtom);
+  const isPremiumContent = video.isPremium === true;
 
-  // Check if drama is in watchlist
-  const isSaved = dramaItem ? isInWatchlist(dramaItem.id) : false;
-
-  // Sync paused state with isPlaying prop
+  // Sync paused state with isPlaying prop and handle premium gating
   useEffect(() => {
-    setPaused(!isPlaying);
-  }, [isPlaying]);
+    if (isPremiumContent && !isPremium) {
+      // Pause premium content if user doesn't have premium access
+      setPaused(true);
+    } else {
+      setPaused(!isPlaying);
+    }
+  }, [isPlaying, isPremiumContent, isPremium]);
 
   // Auto-hide side buttons after 3 seconds when video starts playing
   useEffect(() => {
@@ -113,16 +110,45 @@ function VideoCard({
     }
   }, [showControls, isPlaying]);
 
-  // Save progress when video is paused or component unmounts
+  // Save progress when video is paused, unmounts, or app goes to background
   useEffect(() => {
     const currentRef = videoRef.current;
+    
+    // Save progress when paused
+    if (paused && currentRef) {
+      // Get current time from video ref if possible
+      const saveFinalProgress = async () => {
+        try {
+          // Try to get current time from video (if available)
+          // For now, we'll rely on the last saved progress from onProgress
+          // The progress should already be saved via handleProgress
+        } catch (error) {
+          console.error('Error saving final progress:', error);
+        }
+      };
+      saveFinalProgress();
+    }
+    
     return () => {
-      // Save progress on unmount
-      if (currentRef && !paused) {
-        // Progress will be saved via onProgress callback
+      // Save progress on unmount - clear timeout and save immediately
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
+      }
+      
+      // Force save current progress on unmount
+      if (currentRef && videoProgress[video.id]) {
+        const currentProgress = videoProgress[video.id];
+        updateVideoProgress(
+          videoProgress,
+          video.id,
+          currentProgress.currentTime,
+          currentProgress.duration,
+        ).catch(error => {
+          console.error('Error saving progress on unmount:', error);
+        });
       }
     };
-  }, [paused]);
+  }, [paused, video.id, videoProgress]);
 
   const handleLike = () => {
     if (onLike) {
@@ -130,36 +156,42 @@ function VideoCard({
     }
   };
 
-  const handleFollow = async () => {
-    if (dramaItem) {
-      const isCurrentlySaved = isInWatchlist(dramaItem.id);
-      if (isCurrentlySaved) {
-        // Remove from watchlist
-        const updated = await removeFromWatchlist(watchlist, dramaItem.id);
-        setWatchlist(updated);
-      } else {
-        // Add to watchlist
-        const updated = await addToWatchlist(watchlist, dramaItem);
-        setWatchlist(updated);
-      }
-    }
+  const handleFollow = () => {
     if (onFollow) {
       onFollow(video.author);
     }
   };
 
+  // Use ref to track last saved time to avoid excessive saves
+  const lastSavedTimeRef = useRef<number>(0);
+  const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleProgress = (data: {currentTime: number; playableDuration: number}) => {
     if (data.playableDuration > 0) {
-      // Save progress periodically (every 5 seconds)
-      if (Math.floor(data.currentTime) % 5 === 0) {
-        updateVideoProgress(
-          videoProgress,
-          video.id,
-          data.currentTime,
-          data.playableDuration,
-        ).then(updated => {
-          setVideoProgress(updated);
-        });
+      const currentTime = Math.floor(data.currentTime);
+      const lastSaved = Math.floor(lastSavedTimeRef.current);
+      
+      // Save progress every 3 seconds or when significant time has passed
+      if (currentTime !== lastSaved && (currentTime % 3 === 0 || currentTime - lastSaved >= 3)) {
+        // Clear any pending save
+        if (saveProgressTimeoutRef.current) {
+          clearTimeout(saveProgressTimeoutRef.current);
+        }
+        
+        // Debounce save by 500ms to avoid excessive writes
+        saveProgressTimeoutRef.current = setTimeout(() => {
+          updateVideoProgress(
+            videoProgress,
+            video.id,
+            data.currentTime,
+            data.playableDuration,
+          ).then(updated => {
+            setVideoProgress(updated);
+            lastSavedTimeRef.current = data.currentTime;
+          }).catch(error => {
+            console.error('Error saving video progress:', error);
+          });
+        }, 500);
       }
     }
   };
@@ -180,7 +212,7 @@ function VideoCard({
       {!hasError ? (
         <Video
           ref={videoRef}
-          source={video.videoSource as any}
+          source={resolveVideoSource(video.videoSource) as any}
           style={StyleSheet.absoluteFillObject}
           resizeMode="cover"
           repeat={true}
@@ -228,6 +260,28 @@ function VideoCard({
         </View>
       )}
 
+      {/* Premium lock overlay */}
+      {isPremiumContent && !isPremium && (
+        <View style={styles.premiumLockOverlay}>
+          <View style={styles.premiumLockContent}>
+            <Icon name="lock-closed" size={60} color={theme.colors.text.primary} />
+            <Text style={styles.premiumLockTitle}>Premium Content</Text>
+            <Text style={styles.premiumLockText}>
+              Upgrade to Premium to watch this video
+            </Text>
+            <TouchableOpacity
+              style={styles.premiumLockButton}
+              onPress={() => {
+                // Navigate to subscription screen
+                (navigation as any).navigate('Subscription');
+              }}
+              activeOpacity={0.8}>
+              <Text style={styles.premiumLockButtonText}>Upgrade Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Overlay UI */}
       <View style={styles.overlay}>
         {/* Top section - Author info */}
@@ -253,23 +307,14 @@ function VideoCard({
               <Text style={styles.buttonText}>{video.likes}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-              <Icon
-                name="list-outline"
-                size={32}
-                color={theme.colors.text.primary}
-              />
-              <Text style={styles.buttonText}>Episodes</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.iconButton}
               onPress={handleFollow}
               activeOpacity={0.7}>
               <Icon
-                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                name="bookmark-outline"
                 size={32}
-                color={isSaved ? theme.colors.blue.primary : theme.colors.text.primary}
+                color={theme.colors.text.primary}
               />
               <Text style={styles.buttonText}>Follow</Text>
             </TouchableOpacity>
@@ -453,6 +498,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.background.primary,
+  },
+  premiumLockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  premiumLockContent: {
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  premiumLockTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  premiumLockText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  premiumLockButton: {
+    marginTop: theme.spacing.lg,
+    backgroundColor: theme.colors.blue.primary,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+  },
+  premiumLockButtonText: {
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
   },
 });
 

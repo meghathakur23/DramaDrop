@@ -71,6 +71,15 @@ function DramaCard({
           </View>
         )}
 
+        {/* Premium Lock Overlay */}
+        {item.isPremium && (
+          <View style={styles.premiumLockOverlay}>
+            <View style={styles.premiumLockContainer}>
+              <Icon name="lock-closed" size={24} color={theme.colors.text.primary} />
+            </View>
+          </View>
+        )}
+
         {/* Bookmark Button (always visible, positioned on left if other icons present) */}
         <TouchableOpacity
           style={[
@@ -189,6 +198,21 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.fontWeight.medium,
     color: theme.colors.text.primary,
     marginTop: theme.spacing.xs,
+  },
+  premiumLockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: theme.borderRadius.lg,
+  },
+  premiumLockContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: theme.borderRadius.full,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

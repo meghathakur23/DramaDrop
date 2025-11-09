@@ -14,6 +14,7 @@ import {
   spotlightItems,
 } from '../data/dummyData';
 import {DramaItem} from '../data/dummyData';
+import {allVideos} from '../data/videoData';
 import {
   watchlistAtom,
   addToWatchlist,
@@ -41,8 +42,19 @@ function HomeScreen() {
   const bottomPadding = tabBarHeight + theme.spacing.xl;
 
   const handleDramaPress = (item: DramaItem) => {
-    // Navigate to VideoPlayer screen with dramaId
-    (navigation as any).navigate('VideoPlayer', {dramaId: item.id});
+    // Find the corresponding video from allVideos
+    const video = allVideos.find(v => v.id === item.id);
+    
+    if (video) {
+      // Navigate to VideoPlayer screen with the video
+      (navigation as any).navigate('VideoPlayer', {
+        videoId: video.id,
+        videos: [video], // Pass single video as array to start from this video
+      });
+    } else {
+      // Fallback: navigate with videoId only
+      (navigation as any).navigate('VideoPlayer', {videoId: item.id});
+    }
   };
 
   const handleDramaSave = async (item: DramaItem) => {

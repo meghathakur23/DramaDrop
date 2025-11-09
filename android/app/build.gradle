@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"
 
 // Apply vector icons fonts
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
@@ -120,6 +121,9 @@ dependencies {
         implementation jscFlavor
     }
 
+    // Google Play Services Base (required for all Play Services)
+    implementation 'com.google.android.gms:play-services-base:18.3.0'
     // Google Play Services Auth for Phone Number Hint API
-    implementation 'com.google.android.gms:play-services-auth:20.0.0'
+    // Using version 18.1.0 which includes Credentials API
+    implementation 'com.google.android.gms:play-services-auth:18.1.0'
 }
