@@ -23,6 +23,10 @@ import {resolveVideoSource} from '../utils/videoSourceResolver';
 import {isPremiumAtom} from '../store/subscriptionAtoms';
 
 const {height: WINDOW_HEIGHT, width: WINDOW_WIDTH} = Dimensions.get('window');
+// Calculate 9:16 portrait aspect ratio dimensions
+// For 9:16 ratio: width:height = 9:16, so width = height * (9/16)
+const VIDEO_WIDTH = WINDOW_HEIGHT * (9 / 16);
+const VIDEO_HORIZONTAL_MARGIN = (WINDOW_WIDTH - VIDEO_WIDTH) / 2;
 
 interface VideoCardProps {
   video: VideoItem;
@@ -30,6 +34,8 @@ interface VideoCardProps {
   initialProgress?: number; // Time in seconds to resume from
   onLike?: (videoId: string) => void;
   onFollow?: (author: string) => void;
+  onPlayPress?: () => void;
+  onPausePress?: () => void;
 }
 
 function VideoCard({
@@ -38,8 +44,11 @@ function VideoCard({
   initialProgress = 0,
   onLike,
   onFollow,
+  onPlayPress,
+  onPausePress,
 }: VideoCardProps) {
-  const [paused, setPaused] = useState(!isPlaying);
+  // Videos start paused by default - only play when explicitly started
+  const [paused, setPaused] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -61,6 +70,7 @@ function VideoCard({
       // Pause premium content if user doesn't have premium access
       setPaused(true);
     } else {
+      // Only play if isPlaying is true (manually started)
       setPaused(!isPlaying);
     }
   }, [isPlaying, isPremiumContent, isPremium]);
@@ -198,8 +208,16 @@ function VideoCard({
 
 
   const togglePlayPause = () => {
-    setPaused(!paused);
+    const newPausedState = !paused;
+    setPaused(newPausedState);
     setShowControls(true);
+    
+    // Notify parent component about play/pause state
+    if (newPausedState) {
+      onPausePress?.();
+    } else {
+      onPlayPress?.();
+    }
   };
 
   const toggleMute = () => {
@@ -208,50 +226,57 @@ function VideoCard({
 
   return (
     <View style={styles.container}>
-      {/* Full-screen video player or thumbnail fallback */}
-      {!hasError ? (
-        <Video
-          ref={videoRef}
-          source={resolveVideoSource(video.videoSource) as any}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="cover"
-          repeat={true}
-          paused={paused}
-          muted={isMuted}
-          playInBackground={false}
-          playWhenInactive={false}
-          ignoreSilentSwitch="obey"
-          progressUpdateInterval={1000}
-          onLoadStart={() => {
-            setIsLoading(true);
-            setHasError(false);
-          }}
-          onLoad={() => {
-            setIsLoading(false);
-            console.log('Video loaded');
-          }}
-          onProgress={handleProgress}
-          onError={(error: any) => {
-            console.error('Video error:', error);
-            setHasError(true);
-            setIsLoading(false);
-          }}
-          onBuffer={(data: any) => {
-            // Handle buffering
-            if (data.isBuffering) {
+      {/* Video container with 9:16 aspect ratio */}
+      <View style={styles.videoContainer}>
+        {/* Full-screen video player or thumbnail fallback */}
+        {!hasError ? (
+          <Video
+            ref={videoRef}
+            source={resolveVideoSource(video.videoSource) as any}
+            style={styles.video}
+            resizeMode="contain"
+            repeat={false}
+            paused={paused}
+            muted={isMuted}
+            playInBackground={false}
+            playWhenInactive={false}
+            ignoreSilentSwitch="obey"
+            progressUpdateInterval={1000}
+            onLoadStart={() => {
               setIsLoading(true);
-            } else {
+              setHasError(false);
+            }}
+            onLoad={() => {
               setIsLoading(false);
-            }
-          }}
-        />
+              console.log('Video loaded');
+            }}
+            onProgress={handleProgress}
+            onEnd={() => {
+              // Video finished playing - allow it to complete naturally
+              console.log('Video ended:', video.id);
+            }}
+            onError={(error: any) => {
+              console.error('Video error:', error);
+              setHasError(true);
+              setIsLoading(false);
+            }}
+            onBuffer={(data: any) => {
+              // Handle buffering
+              if (data.isBuffering) {
+                setIsLoading(true);
+              } else {
+                setIsLoading(false);
+              }
+            }}
+          />
       ) : (
         <Image
           source={video.thumbnail}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="cover"
+          style={styles.video}
+          resizeMode="contain"
         />
       )}
+      </View>
       
       {/* Loading indicator */}
       {isLoading && !hasError && (
@@ -373,6 +398,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.primary,
     height: WINDOW_HEIGHT,
     width: WINDOW_WIDTH,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoContainer: {
+    width: VIDEO_WIDTH,
+    height: WINDOW_HEIGHT,
+    backgroundColor: theme.colors.background.primary,
+  },
+  video: {
+    width: '100%',
+    height: '100%',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -494,7 +530,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: VIDEO_HORIZONTAL_MARGIN,
+    width: VIDEO_WIDTH,
+    height: WINDOW_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.background.primary,

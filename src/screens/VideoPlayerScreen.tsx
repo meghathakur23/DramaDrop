@@ -64,23 +64,20 @@ function VideoPlayerScreen() {
   };
 
   // Determine which videos to show
-  let videosToShow: VideoItem[] = allVideos;
+  let videosToShow: VideoItem[] = [];
   
   if (routeVideos && routeVideos.length > 0) {
-    // If specific videos provided, start with those and then continue with all videos
-    const firstVideo = routeVideos[0];
-    const remainingVideos = allVideos.filter(v => v.id !== firstVideo.id);
-    videosToShow = [firstVideo, ...remainingVideos];
+    // Show only the provided video(s)
+    videosToShow = routeVideos;
   } else if (videoId) {
-    // If videoId provided, find that video and show it with others
-    const videoIndex = allVideos.findIndex(v => v.id === videoId);
-    if (videoIndex !== -1) {
-      // Start from the selected video
-      videosToShow = [
-        ...allVideos.slice(videoIndex),
-        ...allVideos.slice(0, videoIndex),
-      ];
+    // Find and show only the selected video
+    const selectedVideo = allVideos.find(v => v.id === videoId);
+    if (selectedVideo) {
+      videosToShow = [selectedVideo];
     }
+  } else {
+    // Fallback: show all videos (for ForYou screen or other cases)
+    videosToShow = allVideos;
   }
 
   // Don't render until progress is initialized to ensure progress is loaded

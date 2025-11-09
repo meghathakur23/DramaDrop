@@ -25,6 +25,7 @@ function VideoFeed({
   isScreenFocused = true,
 }: VideoFeedProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null); // Track manually played videos
   const flatListRef = useRef<FlatList>(null);
   const [interactions, setInteractions] = useAtom(videoInteractionsAtom);
   const [videoProgress] = useAtom(videoProgressAtom);
@@ -44,6 +45,12 @@ function VideoFeed({
         const newActiveIndex = viewableItems[0].index ?? 0;
         if (newActiveIndex !== activeIndex) {
           setActiveIndex(newActiveIndex);
+          
+          // Pause the previously playing video when scrolling away
+          if (playingVideoId && videos[activeIndex]?.id !== playingVideoId) {
+            // Clear playing video ID when scrolling to a different video
+            setPlayingVideoId(null);
+          }
           
           // Track video in watch history when it becomes active
           if (isScreenFocused && videos[newActiveIndex]) {
@@ -65,7 +72,7 @@ function VideoFeed({
         }
       }
     },
-    [activeIndex, isScreenFocused, videos, videoProgress, watchHistory, setWatchHistoryAtom],
+    [activeIndex, isScreenFocused, videos, videoProgress, watchHistory, setWatchHistoryAtom, playingVideoId],
   );
 
   const viewabilityConfigCallbackPairs = useRef([
@@ -126,13 +133,28 @@ function VideoFeed({
       // Get initial progress for this video
       const initialProgress = getVideoProgress(videoProgress, item.id);
 
+      // Only play if this video is manually started and is the active video
+      const shouldPlay = index === activeIndex && 
+                        isScreenFocused && 
+                        playingVideoId === item.id;
+
       return (
         <VideoCard
           video={videoWithInteraction}
-          isPlaying={index === activeIndex && isScreenFocused}
+          isPlaying={shouldPlay}
           initialProgress={initialProgress}
           onLike={handleLike}
           onFollow={handleFollow}
+          onPlayPress={() => {
+            // When user presses play, set this video as playing
+            if (index === activeIndex) {
+              setPlayingVideoId(item.id);
+            }
+          }}
+          onPausePress={() => {
+            // When user pauses, clear playing video
+            setPlayingVideoId(null);
+          }}
         />
       );
     },
@@ -143,6 +165,7 @@ function VideoFeed({
       handleFollow,
       isScreenFocused,
       videoProgress,
+      playingVideoId,
     ],
   );
 
@@ -167,6 +190,7 @@ function VideoFeed({
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         pagingEnabled={true}
+        scrollEnabled={videos.length > 1}
         showsVerticalScrollIndicator={false}
         snapToInterval={WINDOW_HEIGHT}
         snapToAlignment="start"
