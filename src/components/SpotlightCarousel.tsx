@@ -81,11 +81,6 @@ function SpotlightCarousel({data}: SpotlightCarouselProps) {
                 <Text style={styles.playButtonText}>Play</Text>
               </LinearGradient>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.saveButton}>
-              <Icon name="add" size={18} color={theme.colors.text.primary} />
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -188,21 +183,6 @@ const styles = StyleSheet.create({
   playButtonText: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    gap: theme.spacing.xs,
-  },
-  saveButtonText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.medium,
     color: theme.colors.text.primary,
   },
   pagination: {
