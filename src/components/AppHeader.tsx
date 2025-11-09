@@ -13,8 +13,14 @@ function AppHeader() {
     (navigation as any).navigate('Search');
   };
 
+  const handleVIPPress = () => {
+    (navigation as any).navigate('Profile', {
+      screen: 'Subscription',
+    });
+  };
+
   return (
-    <View style={[styles.container, {paddingTop: insets.top}]}>
+    <View style={[styles.container]}>
       <TouchableOpacity 
         style={styles.searchContainer}
         onPress={handleSearchPress}
@@ -34,8 +40,11 @@ function AppHeader() {
         <TouchableOpacity style={styles.iconButton}>
           <Icon name="notifications-outline" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
-          <Icon name="person-circle-outline" size={24} color={theme.colors.text.primary} />
+        <TouchableOpacity 
+          style={styles.iconButton}
+          onPress={handleVIPPress}
+          activeOpacity={0.7}>
+          <Icon name="diamond" size={24} color="#FFD700" />
         </TouchableOpacity>
       </View>
     </View>
@@ -47,7 +56,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.base,
+    // paddingHorizontal: theme.spacing.base,
     paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.background.primary,
   },
