@@ -23,6 +23,7 @@ import ForYouScreen from './src/screens/ForYouScreen';
 import WatchlistScreen from './src/screens/WatchlistScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import VideoPlayerScreen from './src/screens/VideoPlayerScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import TopUpScreen from './src/screens/TopUpScreen';
 import WalletScreen from './src/screens/WalletScreen';
@@ -35,6 +36,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 const ProfileStack = createStackNavigator();
+const MainStack = createStackNavigator();
 
 // Custom dark theme for navigation
 const customDarkTheme = {
@@ -49,6 +51,19 @@ const customDarkTheme = {
     notification: theme.colors.purple.primary,
   },
 };
+
+function MainStackNavigator() {
+  return (
+    <MainStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: {backgroundColor: theme.colors.background.primary},
+      }}>
+      <MainStack.Screen name="Tabs" component={TabNavigator} />
+      <MainStack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
+    </MainStack.Navigator>
+  );
+}
 
 function TabNavigator() {
   const insets = useSafeAreaInsets();
@@ -217,7 +232,7 @@ function AppNavigator() {
   return (
     <NavigationContainer theme={customDarkTheme}>
       {authState.isLoggedIn ? (
-        <TabNavigator />
+        <MainStackNavigator />
       ) : (
         <AuthStack />
       )}

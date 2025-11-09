@@ -1,9 +1,9 @@
 import React, {useState, useEffect} from 'react';
 import {StyleSheet, View, StatusBar} from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRoute} from '@react-navigation/native';
 import {useSetAtom} from 'jotai';
 import VideoFeed from '../components/VideoFeed';
-import {forYouVideos} from '../data/forYouVideos';
+import {dramaEpisodes, getEpisodesForDrama} from '../data/videoData';
 import {theme} from '../theme';
 import {
   watchlistAtom,
@@ -14,8 +14,15 @@ import {
   initializeVideoProgress,
 } from '../store/videoProgressAtoms';
 
-function ForYouScreen() {
+interface RouteParams {
+  dramaId: string;
+}
+
+function VideoPlayerScreen() {
   const [isFocused, setIsFocused] = useState(true);
+  const route = useRoute();
+  const params = (route.params as RouteParams) || {};
+  const dramaId = params.dramaId;
   const setWatchlist = useSetAtom(watchlistAtom);
   const setVideoProgress = useSetAtom(videoProgressAtom);
 
@@ -48,12 +55,30 @@ function ForYouScreen() {
     // Handle video end logic (e.g., analytics, next video suggestion)
   };
 
+  // Filter videos for the specific drama
+  const dramaVideos = dramaId ? getEpisodesForDrama(dramaEpisodes, dramaId) : [];
+
+  // Log for debugging
+  useEffect(() => {
+    if (dramaId) {
+      console.log('VideoPlayerScreen - dramaId:', dramaId);
+      console.log('VideoPlayerScreen - found episodes:', dramaVideos.length);
+      if (dramaVideos.length === 0) {
+        console.warn('No episodes found for dramaId:', dramaId);
+      }
+    }
+  }, [dramaId, dramaVideos.length]);
+
+  // If no dramaId provided or no episodes found, show all episodes as fallback
+  const videosToShow = dramaId && dramaVideos.length > 0 ? dramaVideos : dramaEpisodes;
+
   return (
     <View style={styles.container}>
       <VideoFeed
-        videos={forYouVideos}
+        videos={videosToShow}
         onVideoEnd={handleVideoEnd}
         isScreenFocused={isFocused}
+        initialDramaId={dramaId}
       />
     </View>
   );
@@ -66,5 +91,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ForYouScreen;
+export default VideoPlayerScreen;
 

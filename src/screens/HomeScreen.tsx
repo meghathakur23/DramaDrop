@@ -41,8 +41,8 @@ function HomeScreen() {
   const bottomPadding = tabBarHeight + theme.spacing.xl;
 
   const handleDramaPress = (item: DramaItem) => {
-    // Navigate to ForYou screen with dramaId
-    navigation.navigate('ForYou' as never, {dramaId: item.id} as never);
+    // Navigate to VideoPlayer screen with dramaId
+    (navigation as any).navigate('VideoPlayer', {dramaId: item.id});
   };
 
   const handleDramaSave = async (item: DramaItem) => {
