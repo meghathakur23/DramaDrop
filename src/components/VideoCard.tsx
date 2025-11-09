@@ -55,6 +55,10 @@ function VideoCard({
   const [isLoading, setIsLoading] = useState(true);
   const [showSideButtons, setShowSideButtons] = useState(false);
   const [hasSeeked, setHasSeeked] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const progressBarWidthRef = useRef(0);
   // Use safe area insets with fallback
   const safeAreaInsets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -75,20 +79,26 @@ function VideoCard({
     }
   }, [isPlaying, isPremiumContent, isPremium]);
 
-  // Auto-hide side buttons after 3 seconds when video starts playing
+  // Handle video tap to show/hide side buttons
+  const handleVideoTap = () => {
+    setShowSideButtons(prev => !prev);
+    setShowControls(true);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setShowSideButtons(false);
+      setShowControls(false);
+    }, 3000);
+  };
+
+  // Initialize duration from saved progress if available
   useEffect(() => {
-    if (isPlaying && !paused) {
-      // Show buttons immediately when video starts
-      setShowSideButtons(true);
-      
-      // Hide after 3 seconds
-      const timer = setTimeout(() => {
-        setShowSideButtons(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
+    const savedProgress = videoProgress[video.id];
+    if (savedProgress && savedProgress.duration > 0) {
+      setDuration(savedProgress.duration);
+      setCurrentTime(savedProgress.currentTime || 0);
     }
-  }, [isPlaying, paused]);
+  }, [video.id, videoProgress]);
 
   // Resume from last position when video loads
   useEffect(() => {
@@ -176,33 +186,41 @@ function VideoCard({
   const lastSavedTimeRef = useRef<number>(0);
   const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleProgress = (data: {currentTime: number; playableDuration: number}) => {
-    if (data.playableDuration > 0) {
-      const currentTime = Math.floor(data.currentTime);
-      const lastSaved = Math.floor(lastSavedTimeRef.current);
-      
-      // Save progress every 3 seconds or when significant time has passed
-      if (currentTime !== lastSaved && (currentTime % 3 === 0 || currentTime - lastSaved >= 3)) {
-        // Clear any pending save
-        if (saveProgressTimeoutRef.current) {
-          clearTimeout(saveProgressTimeoutRef.current);
-        }
-        
-        // Debounce save by 500ms to avoid excessive writes
-        saveProgressTimeoutRef.current = setTimeout(() => {
-          updateVideoProgress(
-            videoProgress,
-            video.id,
-            data.currentTime,
-            data.playableDuration,
-          ).then(updated => {
-            setVideoProgress(updated);
-            lastSavedTimeRef.current = data.currentTime;
-          }).catch(error => {
-            console.error('Error saving video progress:', error);
-          });
-        }, 500);
+  const handleProgress = (data: {currentTime: number; playableDuration: number; seekableDuration?: number}) => {
+    // Only update currentTime, don't overwrite duration with playableDuration
+    setCurrentTime(data.currentTime);
+    
+    // Only set duration if it's not already set and we have a valid duration value
+    // Use seekableDuration if available (more accurate), otherwise keep existing duration
+    if (duration === 0 && data.seekableDuration && data.seekableDuration > 0) {
+      setDuration(data.seekableDuration);
+    }
+    
+    const currentTime = Math.floor(data.currentTime);
+    const lastSaved = Math.floor(lastSavedTimeRef.current);
+    
+    // Save progress every 3 seconds or when significant time has passed
+    if (currentTime !== lastSaved && (currentTime % 3 === 0 || currentTime - lastSaved >= 3)) {
+      // Clear any pending save
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
       }
+      
+      // Debounce save by 500ms to avoid excessive writes
+      // Use current duration state (from onLoad) instead of playableDuration
+      saveProgressTimeoutRef.current = setTimeout(() => {
+        updateVideoProgress(
+          videoProgress,
+          video.id,
+          data.currentTime,
+          duration > 0 ? duration : data.playableDuration, // Fallback to playableDuration only if duration not set
+        ).then(updated => {
+          setVideoProgress(updated);
+          lastSavedTimeRef.current = data.currentTime;
+        }).catch(error => {
+          console.error('Error saving video progress:', error);
+        });
+      }, 500);
     }
   };
 
@@ -224,6 +242,47 @@ function VideoCard({
     setIsMuted(!isMuted);
   };
 
+  // Cycle through playback speeds: 0.5x → 1x → 1.5x → 2x → 0.5x
+  const togglePlaybackSpeed = () => {
+    const speeds = [0.5, 1.0, 1.5, 2.0];
+    const currentIndex = speeds.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % speeds.length;
+    setPlaybackRate(speeds[nextIndex]);
+  };
+
+  // Format time in seconds to MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle seek when user taps progress bar
+  const handleSeek = (seekTime: number) => {
+    if (videoRef.current && duration > 0) {
+      const clampedTime = Math.max(0, Math.min(seekTime, duration));
+      videoRef.current.seek(clampedTime);
+      // onSeek callback will update currentTime, but set it immediately for UI responsiveness
+      setCurrentTime(clampedTime);
+    }
+  };
+
+  // Handle progress bar press - improved accuracy
+  const handleProgressPress = (evt: any) => {
+    if (progressBarWidthRef.current > 0 && duration > 0) {
+      const touchX = evt.nativeEvent.locationX;
+      // Ensure we're using the correct duration value
+      const percentage = Math.max(0, Math.min(1, touchX / progressBarWidthRef.current));
+      const seekTime = percentage * duration;
+      // Only seek if we have a valid duration
+      if (duration > 0 && seekTime >= 0 && seekTime <= duration) {
+        handleSeek(seekTime);
+      }
+    }
+  };
+
+
+
   return (
     <View style={styles.container}>
       {/* Video container with 9:16 aspect ratio */}
@@ -238,19 +297,32 @@ function VideoCard({
             repeat={false}
             paused={paused}
             muted={isMuted}
+            rate={playbackRate}
+            controls={false}
             playInBackground={false}
             playWhenInactive={false}
             ignoreSilentSwitch="obey"
-            progressUpdateInterval={1000}
+            progressUpdateInterval={100}
             onLoadStart={() => {
               setIsLoading(true);
               setHasError(false);
             }}
-            onLoad={() => {
+            onLoad={(data: any) => {
               setIsLoading(false);
-              console.log('Video loaded');
+              // Set duration from onLoad - this is the actual video duration
+              if (data.duration && data.duration > 0) {
+                setDuration(data.duration);
+                console.log('Video loaded, duration:', data.duration);
+              } else if (data.seekableDuration && data.seekableDuration > 0) {
+                // Fallback to seekableDuration if duration is not available
+                setDuration(data.seekableDuration);
+                console.log('Video loaded, seekableDuration:', data.seekableDuration);
+              }
             }}
             onProgress={handleProgress}
+            onSeek={(data: any) => {
+              setCurrentTime(data.currentTime);
+            }}
             onEnd={() => {
               // Video finished playing - allow it to complete naturally
               console.log('Video ended:', video.id);
@@ -308,21 +380,37 @@ function VideoCard({
       )}
 
       {/* Overlay UI */}
-      <View style={styles.overlay}>
-        {/* Top section - Author info */}
-        <View style={styles.topSection}>
-          {/* <View style={styles.authorInfo}>
-            <Text style={styles.authorText}>{video.author}</Text>
-            <Text style={styles.titleText}>{video.title}</Text>
-          </View> */}
-        </View>
+      <TouchableOpacity 
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={handleVideoTap}>
+        {/* Top section - Back button and Title (shown when video is tapped) */}
+        {showSideButtons && (
+          <View style={[styles.topSection, {paddingTop: insets.top + theme.spacing.md}]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                navigation.goBack();
+              }}
+              activeOpacity={0.7}>
+              <Icon name="arrow-back" size={24} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+            <Text style={styles.videoTitle} numberOfLines={1}>
+              {video.title}
+            </Text>
+          </View>
+        )}
 
-        {/* Right side - Interaction buttons (shown for 3 seconds when video starts) */}
+        {/* Right side - Interaction buttons (shown when video is tapped) */}
         {showSideButtons && (
           <View style={[styles.interactionButtons, {bottom: Math.max(insets.bottom + theme.spacing.xl + 120, theme.spacing['2xl'] + 120)}]}>
             <TouchableOpacity
               style={styles.iconButton}
-              onPress={handleLike}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleLike();
+              }}
               activeOpacity={0.7}>
               <Icon
                 name={video.isLiked ? 'heart' : 'heart-outline'}
@@ -334,7 +422,10 @@ function VideoCard({
 
             <TouchableOpacity
               style={styles.iconButton}
-              onPress={handleFollow}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleFollow();
+              }}
               activeOpacity={0.7}>
               <Icon
                 name="bookmark-outline"
@@ -350,36 +441,29 @@ function VideoCard({
         {(paused || showControls) && (
           <TouchableOpacity
             style={styles.playPauseButton}
-            onPress={togglePlayPause}
+            onPress={(e) => {
+              e.stopPropagation();
+              togglePlayPause();
+            }}
             activeOpacity={0.8}>
             <View style={styles.playPauseIconContainer}>
               <Icon
                 name={paused ? 'play' : 'pause'}
-                size={60}
+                size={40}
                 color={theme.colors.text.primary}
               />
             </View>
           </TouchableOpacity>
         )}
 
-        {/* Bottom section - Description with gradient overlay */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0, 0, 0, 0.8)']}
-          style={styles.bottomGradient}>
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionText} numberOfLines={2}>
-              {video.description}
-            </Text>
-            <View style={styles.metaInfo}>
-              <Text style={styles.metaText}>{video.duration}</Text>
-            </View>
-          </View>
-        </LinearGradient>
 
         {/* Mute button (top right) */}
         <TouchableOpacity
           style={styles.muteButton}
-          onPress={toggleMute}
+          onPress={(e) => {
+            e.stopPropagation();
+            toggleMute();
+          }}
           activeOpacity={0.7}>
           <Icon
             name={isMuted ? 'volume-mute-outline' : 'volume-high-outline'}
@@ -387,7 +471,40 @@ function VideoCard({
             color={theme.colors.text.primary}
           />
         </TouchableOpacity>
-      </View>
+
+        {/* Bottom Controls Bar - Seekbar Only (shown when video is tapped) */}
+        {showSideButtons && duration > 0 && (
+          <View style={[styles.bottomControls, {paddingBottom: insets.bottom + theme.spacing.md}]}>
+            {/* Seekbar Only - Using react-native-video's seek functionality */}
+            <View style={styles.progressBarWrapper}>
+              <Text style={styles.timeText}>
+                {formatTime(currentTime)}
+              </Text>
+              <TouchableOpacity
+                style={styles.progressBarTrack}
+                activeOpacity={1}
+                onLayout={(e) => {
+                  progressBarWidthRef.current = e.nativeEvent.layout.width;
+                }}
+                onPress={handleProgressPress}>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${
+                          duration > 0 ? (currentTime / duration) * 100 : 0
+                        }%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.timeText}>{formatTime(duration)}</Text>
+            </View>
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -416,25 +533,23 @@ const styles = StyleSheet.create({
   },
   topSection: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingTop: theme.spacing['3xl'],
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
   },
-  authorInfo: {
-    flex: 1,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: theme.spacing.md,
   },
-  authorText: {
+  videoTitle: {
+    flex: 1,
     color: theme.colors.text.primary,
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    marginBottom: theme.spacing.xs,
-  },
-  titleText: {
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.base,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   followButton: {
     paddingHorizontal: theme.spacing.md,
@@ -488,35 +603,12 @@ const styles = StyleSheet.create({
     marginTop: -30,
   },
   playPauseIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  bottomGradient: {
-    paddingBottom: theme.spacing['3xl'],
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.xl,
-  },
-  descriptionContainer: {
-    maxWidth: WINDOW_WIDTH * 0.7,
-  },
-  descriptionText: {
-    color: theme.colors.text.primary,
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.typography.fontWeight.medium,
-    lineHeight: 20,
-    marginBottom: theme.spacing.sm,
-  },
-  metaInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaText: {
-    color: theme.colors.text.tertiary,
-    fontSize: theme.typography.fontSize.sm,
   },
   muteButton: {
     position: 'absolute',
@@ -573,6 +665,61 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.text.primary,
+  },
+  bottomControls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    zIndex: 10,
+  },
+  progressBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  timeText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.medium,
+    minWidth: 45,
+  },
+  progressBarTrack: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+    marginHorizontal: theme.spacing.sm,
+  },
+  progressBarBackground: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: theme.colors.blue.primary,
+    borderRadius: 2,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  speedButton: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  speedButtonText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
 });
 
